@@ -47,7 +47,7 @@ interface NavItem {
 }
 
 const tpoNavItems: NavItem[] = [
-  { title: "Dashboard", url: "/tpo", icon: LayoutDashboard },
+  { title: "Company Visit Data", url: "/tpo", icon: LayoutDashboard },
   { title: "Placed Students", url: "/tpo/placed", icon: Award },
   { title: "Drive Management", url: "/tpo/drives", icon: CalendarRange },
   { title: "Application Pool", url: "/tpo/applications", icon: Inbox },
@@ -63,7 +63,7 @@ const hodNavItems: NavItem[] = [
   { title: "Pending Students", url: "/hod", icon: ClipboardCheck },
   { title: "Drive Applications", url: "/hod/applications", icon: FileCheck },
   { title: "Manage Students", url: "/hod/students", icon: UserPlus },
-  { title: "Approved History", url: "/hod/history", icon: History },
+  { title: "Verification History", url: "/hod/history", icon: History },
   { title: "Settings", url: "/hod/settings", icon: Settings },
 ];
 

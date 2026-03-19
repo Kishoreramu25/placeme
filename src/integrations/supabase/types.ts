@@ -377,6 +377,13 @@ export type Database = {
           mother_tongue: string | null
           nationality: string | null
           state: string | null
+          district: string | null
+          alternate_email: string | null
+          whatsapp_number: string | null
+          pan_number: string | null
+          passport_available: string | null
+          passport_number: string | null
+          hostel_name: string | null
           profile_status: string | null
           twelfth_register_number: string | null
           twelfth_school_name: string | null
@@ -388,6 +395,8 @@ export type Database = {
           current_cgpa: string | null
           current_standing_arrear: string | null
           history_of_arrear: string | null
+          is_first_graduate: string | null
+          is_single_parent: string | null
           is_ex_serviceman_child: string | null
           sports_representation: string | null
           qualifying_exam_details: string | null
@@ -421,17 +430,42 @@ export type Database = {
           is_hosteller: string | null
           is_transport: string | null
           tenth_mark: string | null
+          tenth_percentage: string | null
+          tenth_school_name: string | null
           tenth_board: string | null
           twelfth_mark: string | null
+          twelfth_percentage: string | null
+          diploma_studied: string | null
+          diploma_institute_name: string | null
+          diploma_stream: string | null
+          work_experience: string | null
+          current_year: string | null
+          sem_1_cgpa: string | null
+          sem_2_cgpa: string | null
+          sem_3_cgpa: string | null
+          sem_4_cgpa: string | null
+          sem_5_cgpa: string | null
+          sem_6_cgpa: string | null
+          sem_7_cgpa: string | null
+          sem_8_cgpa: string | null
+          overall_cgpa: string | null
           current_backlogs: string | null
           history_of_arrears_count: string | null
           resume_url: string | null
+          photo_url: string | null
           skills: string | null
+          programming_languages: string | null
           internship_experience: string | null
           projects: string | null
           certifications: string | null
           preferred_job_role: string | null
           preferred_location: string | null
+          github_url: string | null
+          linkedin_url: string | null
+          hackerrank_url: string | null
+          leetcode_url: string | null
+          interested_in_placement: string | null
+          placement_opt_out_reason: string | null
         }
         Insert: {
           id: string
@@ -455,6 +489,13 @@ export type Database = {
           mother_tongue?: string | null
           nationality?: string | null
           state?: string | null
+          district?: string | null
+          alternate_email?: string | null
+          whatsapp_number?: string | null
+          pan_number?: string | null
+          passport_available?: string | null
+          passport_number?: string | null
+          hostel_name?: string | null
           profile_status?: string | null
           twelfth_register_number?: string | null
           twelfth_school_name?: string | null
@@ -466,6 +507,8 @@ export type Database = {
           current_cgpa?: string | null
           current_standing_arrear?: string | null
           history_of_arrear?: string | null
+          is_first_graduate?: string | null
+          is_single_parent?: string | null
           is_ex_serviceman_child?: string | null
           sports_representation?: string | null
           qualifying_exam_details?: string | null
@@ -499,17 +542,42 @@ export type Database = {
           is_hosteller?: string | null
           is_transport?: string | null
           tenth_mark?: string | null
+          tenth_percentage?: string | null
+          tenth_school_name?: string | null
           tenth_board?: string | null
           twelfth_mark?: string | null
+          twelfth_percentage?: string | null
+          diploma_studied?: string | null
+          diploma_institute_name?: string | null
+          diploma_stream?: string | null
+          work_experience?: string | null
+          current_year?: string | null
+          sem_1_cgpa?: string | null
+          sem_2_cgpa?: string | null
+          sem_3_cgpa?: string | null
+          sem_4_cgpa?: string | null
+          sem_5_cgpa?: string | null
+          sem_6_cgpa?: string | null
+          sem_7_cgpa?: string | null
+          sem_8_cgpa?: string | null
+          overall_cgpa?: string | null
           current_backlogs?: string | null
           history_of_arrears_count?: string | null
           resume_url?: string | null
+          photo_url?: string | null
           skills?: string | null
+          programming_languages?: string | null
           internship_experience?: string | null
           projects?: string | null
           certifications?: string | null
           preferred_job_role?: string | null
           preferred_location?: string | null
+          github_url?: string | null
+          linkedin_url?: string | null
+          hackerrank_url?: string | null
+          leetcode_url?: string | null
+          interested_in_placement?: string | null
+          placement_opt_out_reason?: string | null
         }
         Update: {
           id?: string
@@ -533,6 +601,13 @@ export type Database = {
           mother_tongue?: string | null
           nationality?: string | null
           state?: string | null
+          district?: string | null
+          alternate_email?: string | null
+          whatsapp_number?: string | null
+          pan_number?: string | null
+          passport_available?: string | null
+          passport_number?: string | null
+          hostel_name?: string | null
           profile_status?: string | null
           twelfth_register_number?: string | null
           twelfth_school_name?: string | null
@@ -544,6 +619,8 @@ export type Database = {
           current_cgpa?: string | null
           current_standing_arrear?: string | null
           history_of_arrear?: string | null
+          is_first_graduate?: string | null
+          is_single_parent?: string | null
           is_ex_serviceman_child?: string | null
           sports_representation?: string | null
           qualifying_exam_details?: string | null
@@ -577,17 +654,42 @@ export type Database = {
           is_hosteller?: string | null
           is_transport?: string | null
           tenth_mark?: string | null
+          tenth_percentage?: string | null
+          tenth_school_name?: string | null
           tenth_board?: string | null
           twelfth_mark?: string | null
+          twelfth_percentage?: string | null
+          diploma_studied?: string | null
+          diploma_institute_name?: string | null
+          diploma_stream?: string | null
+          work_experience?: string | null
+          current_year?: string | null
+          sem_1_cgpa?: string | null
+          sem_2_cgpa?: string | null
+          sem_3_cgpa?: string | null
+          sem_4_cgpa?: string | null
+          sem_5_cgpa?: string | null
+          sem_6_cgpa?: string | null
+          sem_7_cgpa?: string | null
+          sem_8_cgpa?: string | null
+          overall_cgpa?: string | null
           current_backlogs?: string | null
           history_of_arrears_count?: string | null
           resume_url?: string | null
+          photo_url?: string | null
           skills?: string | null
+          programming_languages?: string | null
           internship_experience?: string | null
           projects?: string | null
           certifications?: string | null
           preferred_job_role?: string | null
           preferred_location?: string | null
+          github_url?: string | null
+          linkedin_url?: string | null
+          hackerrank_url?: string | null
+          leetcode_url?: string | null
+          interested_in_placement?: string | null
+          placement_opt_out_reason?: string | null
         }
         Relationships: [
           {

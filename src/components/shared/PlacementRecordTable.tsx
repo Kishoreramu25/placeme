@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Save, Trash2, Upload, Loader2, RefreshCw, Download, Clipboard, Eye, EyeOff, X, CheckCircle2 } from "lucide-react";
+import { Plus, Save, Trash2, Upload, Loader2, RefreshCw, Download, Clipboard, Eye, EyeOff, X, CheckCircle2, Search, Filter, ArrowUpDown, ArrowUp, FileDown, Columns, GripVertical, ChevronDown, Wand2, Pencil, GraduationCap, Building, Calculator, DollarSign, CheckSquare, Briefcase } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -24,11 +24,13 @@ import {
 import {
     AlertDialog,
     AlertDialogAction,
+    AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
+    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
     Dialog,
@@ -37,8 +39,10 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 
 // Definition to match PLACEMENT_TEMPLATE.xlsx and placement_records table (Designation removed)
 interface PlacementRecord {
@@ -67,10 +71,12 @@ export function PlacementRecordTable() {
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [focusedCell, setFocusedCell] = useState<{ index: number, field: string } | null>(null);
-    // const [customColumns, setCustomColumns] = useState<string[]>([]); // Replaced by derived state
-    const [hideEmpty, setHideEmpty] = useState(false);
+    const [hideEmpty, setHideEmpty] = useState(() => localStorage.getItem("pr_hideEmpty") === "true");
     const [isColumnDialogOpen, setIsColumnDialogOpen] = useState(false);
     const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
+    
+    // Bulk Select State
+    const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
 
     // === Excel-like State ===
     type CellPos = { row: number; col: number };
@@ -80,6 +86,57 @@ export function PlacementRecordTable() {
     const [isDragging, setIsDragging] = useState(false);
     const [dragEnd, setDragEnd] = useState<CellPos | null>(null);
     const tableRef = useRef<HTMLDivElement>(null);
+    const topScrollRef = useRef<HTMLDivElement>(null);
+
+    const [showScrollTop, setShowScrollTop] = useState(false);
+    const [tableScrollWidth, setTableScrollWidth] = useState(1800);
+
+    // Sync Horizontal Scrolls, detects table width, & Scroll to Top Detection
+    useEffect(() => {
+        const table = tableRef.current;
+        const topScroll = topScrollRef.current;
+        if (!table || !topScroll) return;
+
+        // Sync table width to the top scrollbar's inner spacer
+        const updateWidth = () => {
+            if (table) setTableScrollWidth(table.scrollWidth);
+        };
+        
+        // Initial width set
+        updateWidth();
+
+        const handleTableScroll = () => {
+            if (topScroll.scrollLeft !== table.scrollLeft) {
+                topScroll.scrollLeft = table.scrollLeft;
+            }
+            if (table.scrollTop > 300) setShowScrollTop(true);
+            else setShowScrollTop(false);
+        };
+        const handleTopScroll = () => {
+            if (table.scrollLeft !== topScroll.scrollLeft) {
+                table.scrollLeft = topScroll.scrollLeft;
+            }
+        };
+
+        table.addEventListener('scroll', handleTableScroll);
+        topScroll.addEventListener('scroll', handleTopScroll);
+        
+        // Use ResizeObserver for dynamic column count changes
+        const observer = new ResizeObserver(updateWidth);
+        observer.observe(table);
+
+        return () => {
+            table.removeEventListener('scroll', handleTableScroll);
+            topScroll.removeEventListener('scroll', handleTopScroll);
+            observer.disconnect();
+        };
+    }, []);
+
+    const scrollToTop = () => {
+        if (tableRef.current) {
+            tableRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
 
     // Helper: Get Selection Range
     const getSelectionRange = useCallback(() => {
@@ -144,16 +201,16 @@ export function PlacementRecordTable() {
     const [columnDefs, setColumnDefs] = useState<ColumnDef[]>(() => {
         const saved = localStorage.getItem("placement_record_column_defs_v2");
         const defaultCols: ColumnDef[] = [
-            { key: "v_visit_type", label: "Visit Type", visible: true, isCustom: false },
             { key: "date_of_visit", label: "Date", visible: true, isCustom: false },
             { key: "v_company_name", label: "Company", visible: true, isCustom: false },
-            { key: "v_company_address", label: "Address", visible: true, isCustom: false },
+            { key: "v_visit_type", label: "Visit Type", visible: true, isCustom: false },
+            { key: "salary_package", label: "Salary", visible: true, isCustom: false },
             { key: "v_location", label: "Location", visible: true, isCustom: false },
+            { key: "company_type", label: "Type", visible: true, isCustom: false },
             { key: "v_company_contact_person", label: "Contact Person", visible: true, isCustom: false },
             { key: "v_company_contact_number", label: "Contact No", visible: true, isCustom: false },
             { key: "v_company_mail_id", label: "Email", visible: true, isCustom: false },
-            { key: "company_type", label: "Type", visible: true, isCustom: false },
-            { key: "salary_package", label: "Salary", visible: true, isCustom: false },
+            { key: "v_company_address", label: "Address", visible: true, isCustom: false },
             { key: "remark", label: "Remark", visible: true, isCustom: false },
             { key: "reference_faculty", label: "Ref Faculty", visible: true, isCustom: false },
             { key: "department", label: "Department", visible: false, isCustom: false },
@@ -163,16 +220,17 @@ export function PlacementRecordTable() {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // Merge defaults in case new columns were added to code but not in local storage
-                const merged = defaultCols.map(def => {
+                const orderMap = defaultCols.reduce((acc: any, col, idx) => { acc[col.key] = idx; return acc; }, {});
+                
+                // Merge states while enforcing new professional order
+                const baseCols = defaultCols.map(def => {
                     const found = parsed.find((p: any) => p.key === def.key);
                     return found ? { ...def, ...found } : def;
                 });
-                // Add any custom columns from storage
-                const custom = parsed.filter((p: any) => p.isCustom);
-                return [...merged, ...custom];
+
+                const custom = parsed.filter((p: any) => p.isCustom && !orderMap[p.key]);
+                return [...baseCols, ...custom];
             } catch (e) {
-                console.error("Error parsing column defs", e);
                 return defaultCols;
             }
         }
@@ -216,7 +274,7 @@ export function PlacementRecordTable() {
     };
 
     // Search and Filter State
-    const [searchTerm, setSearchTerm] = useState("");
+    const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("pr_searchTerm") || "");
 
     // Dynamic Filters
     interface FilterCriterion {
@@ -226,23 +284,36 @@ export function PlacementRecordTable() {
         value: string;
     }
 
-    const [activeFilters, setActiveFilters] = useState<FilterCriterion[]>([]);
+    const [activeFilters, setActiveFilters] = useState<FilterCriterion[]>(() => {
+        const saved = localStorage.getItem("pr_activeFilters");
+        return saved ? JSON.parse(saved) : [];
+    });
     const [isAddingFilter, setIsAddingFilter] = useState(false);
     const [newFilterField, setNewFilterField] = useState<string>("");
     const [newFilterValue, setNewFilterValue] = useState<string>("");
+    const [filterValueSearch, setFilterValueSearch] = useState("");
 
-    // Filter Fields Configuration
-    const FILTER_FIELDS: { label: string; key: keyof PlacementRecord }[] = [
-        { label: "Visit Type", key: "v_visit_type" },
-        { label: "Company", key: "v_company_name" },
-        { label: "Location", key: "v_location" },
-        { label: "Company Type", key: "company_type" },
-        { label: "Date of Visit", key: "date_of_visit" },
-        { label: "Reference Faculty", key: "reference_faculty" }
-    ];
+    useEffect(() => {
+        setFilterValueSearch("");
+    }, [newFilterField]);
+
+    // Sort State
+    type SortOption = "date-desc" | "date-asc" | "company-asc" | "company-desc";
+    const [sortBy, setSortBy] = useState<SortOption>(() => (localStorage.getItem("pr_sortBy") as SortOption) || "date-desc");
+    const [isRowDialogOpen, setIsRowDialogOpen] = useState(false);
+    const [editingRow, setEditingRow] = useState<PlacementRecord | null>(null);
+
+    useEffect(() => {
+        localStorage.setItem("pr_searchTerm", searchTerm);
+        localStorage.setItem("pr_hideEmpty", String(hideEmpty));
+        localStorage.setItem("pr_sortBy", sortBy);
+        localStorage.setItem("pr_activeFilters", JSON.stringify(activeFilters));
+    }, [searchTerm, hideEmpty, sortBy, activeFilters]);
+
+
 
     const filteredRecords = useMemo(() => {
-        return records.filter((record) => {
+        const filtered = records.filter((record) => {
             if (searchTerm) {
                 const lowerSearch = searchTerm.toLowerCase();
                 const matchesSearch = (
@@ -266,7 +337,24 @@ export function PlacementRecordTable() {
 
             return true;
         });
-    }, [records, searchTerm, activeFilters]);
+
+        // Apply sorting
+        return filtered.sort((a, b) => {
+            if (sortBy === "company-asc") {
+                return String(a.v_company_name || "").localeCompare(String(b.v_company_name || ""));
+            }
+            if (sortBy === "company-desc") {
+                return String(b.v_company_name || "").localeCompare(String(a.v_company_name || ""));
+            }
+            if (sortBy === "date-asc") {
+                return new Date(a.date_of_visit || 0).getTime() - new Date(b.date_of_visit || 0).getTime();
+            }
+            if (sortBy === "date-desc") {
+                return new Date(b.date_of_visit || 0).getTime() - new Date(a.date_of_visit || 0).getTime();
+            }
+            return 0;
+        });
+    }, [records, searchTerm, activeFilters, sortBy]);
 
 
     const processClipboardData = (clipboardText: string, useFocus: boolean = true) => {
@@ -650,26 +738,60 @@ export function PlacementRecordTable() {
         ? filteredRecords.filter((r) => !isRowEmpty(r))
         : filteredRecords;
 
-    const handleDeleteAll = async () => {
-        if (!confirm("Are you sure you want to delete ALL records? This action cannot be undone.")) return;
 
-        setIsLoading(true);
-        try {
-            const { error } = await (supabase
-                .from("placement_records" as any) as any)
-                .delete()
-                .not("id", "is", null);
 
-            if (error) throw error;
-
-            setRecords([]);
-            toast.success("All records deleted successfully");
-        } catch (error: any) {
-            console.error("Delete all error:", error);
-            toast.error("Failed to delete all records: " + (error.message || "Unknown error"));
-        } finally {
-            setIsLoading(false);
+    const handleSelectAll = useCallback(() => {
+        if (!rowsToShow) return;
+        if (selectedRowIds.size === rowsToShow.length) {
+            setSelectedRowIds(new Set());
+        } else {
+            setSelectedRowIds(new Set(rowsToShow.map((r: any, idx: number) => r.id || `temp-${idx}`)));
         }
+    }, [rowsToShow, selectedRowIds]);
+
+    const handleSelectRow = useCallback((id: string) => {
+        setSelectedRowIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }, []);
+
+    const handleBulkDelete = () => {
+        if (selectedRowIds.size === 0) return;
+        if (confirm(`Are you sure you want to delete ${selectedRowIds.size} records?`)) {
+            const idsToDelete = Array.from(selectedRowIds);
+            const remainingRecords = records.filter((r, idx) => !idsToDelete.includes(r.id || `temp-${idx}`));
+            setRecords(remainingRecords);
+            setSelectedRowIds(new Set());
+            // Sync with backend natively only for real UUIDs
+            idsToDelete.forEach(id => {
+                if (!id.startsWith("temp-")) {
+                    (supabase.from("placement_records" as any) as any).delete().eq("id", id).then();
+                }
+            });
+            toast.success("Batch deleted successfully!");
+        }
+    };
+
+    const handleBulkExport = () => {
+        if (selectedRowIds.size === 0) return;
+        const selectedData = records.filter((r, idx) => selectedRowIds.has(r.id || `temp-${idx}`));
+        const wb = XLSX.utils.book_new();
+        const exportData = selectedData.map((r, i) => {
+            const data: any = { "S.No": i + 1 };
+            visibleColumns.forEach(col => {
+                const val = col.isCustom ? (r.other_details?.[col.key]) : (r as any)[col.key];
+                data[col.label] = val || "";
+            });
+            return data;
+        });
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        XLSX.utils.book_append_sheet(wb, ws, "Selected Companies");
+        XLSX.writeFile(wb, `Company_Visits_Selected.xlsx`);
+        toast.success(`Exported ${selectedData.length} companies.`);
+        setSelectedRowIds(new Set());
     };
 
     const updateRecord = (recordToUpdate: PlacementRecord, field: keyof PlacementRecord, value: string) => {
@@ -1037,12 +1159,12 @@ export function PlacementRecordTable() {
     const handleAddFilter = () => {
         if (!newFilterField || !newFilterValue) return;
 
-        const fieldConfig = FILTER_FIELDS.find(f => f.key === newFilterField);
+        const fieldConfig = columnDefs.find(f => f.key === newFilterField);
         if (!fieldConfig) return;
 
         const newFilter: FilterCriterion = {
             id: Math.random().toString(36).substr(2, 9),
-            field: fieldConfig.key,
+            field: fieldConfig.key as keyof PlacementRecord,
             label: fieldConfig.label,
             value: newFilterValue
         };
@@ -1058,204 +1180,271 @@ export function PlacementRecordTable() {
     };
 
     return (
-        <Card className="w-full border-t-4 border-t-primary shadow-lg">
-            <CardHeader className="space-y-4 pb-6 bg-muted/10">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <Card className="w-full border-0 shadow-premium overflow-hidden bg-background">
+            <CardHeader className="space-y-6 pb-6 bg-muted/5 border-b px-4 md:px-6 pt-6">
+                <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
                     <div>
-                        <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                        <CardTitle className="text-2xl font-black flex items-center gap-3 tracking-tight text-primary">
                             Placement Records
                             {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
                         </CardTitle>
-                        <CardDescription className="text-base mt-1">
+                        <CardDescription className="text-sm font-medium mt-1">
                             Centralized placement data history and management
                         </CardDescription>
                     </div>
-                    <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsColumnDialogOpen(true)}
-                            className="gap-2"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><path d="M9 3v18" /></svg>
-                            Columns
-                        </Button>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileUpload}
-                            className="hidden"
-                            accept=".xlsx, .xls, .csv"
-                            multiple
-                        />
-                        <Button onClick={() => fileInputRef.current?.click()} variant="secondary" className="shadow-sm">
-                            <Upload className="mr-2 h-4 w-4" /> Import Excel/CSV
-                        </Button>
-                        <Button onClick={handlePasteFromClipboard} variant="outline" className="shadow-sm bg-primary/5 border-primary/20 hover:bg-primary/10">
-                            <Clipboard className="mr-2 h-4 w-4 text-primary" /> Paste New Rows
-                        </Button>
+
+                    {/* Peak Professional Action Bar */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Status/Refresh */}
+                        <div className="flex items-center gap-1 mr-2 border-r pr-4 border-border/50">
+                            <Button onClick={fetchRecords} variant="ghost" size="icon" className="h-9 w-9 hover:bg-primary/10 transition-colors" title="Sync from Database">
+                                <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                        </div>
+
+                        {/* Dropdown: Data Management */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="secondary" className="shadow-sm">
-                                    <Download className="mr-2 h-4 w-4" /> Export Data
+                                <Button variant="outline" className="h-10 gap-2 shadow-sm font-semibold border-primary/20 hover:bg-primary/5">
+                                    <Plus className="h-4 w-4 text-primary" /> Modify Table
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={handleDownload}>
-                                    Export Filtered ({filteredRecords.length})
+                            <DropdownMenuContent align="end" className="w-56 p-2">
+                                <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="cursor-pointer gap-2 mb-1">
+                                    <Upload className="h-4 w-4 text-indigo-500" /> Import Excel/CSV
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleMultipleExport}>
-                                    Export All (Multi-Sheet)
+                                <DropdownMenuItem onClick={handlePasteFromClipboard} className="cursor-pointer gap-2 mb-1">
+                                    <Clipboard className="h-4 w-4 text-indigo-500" /> Paste Raw Data
+                                </DropdownMenuItem>
+                                <div className="h-px bg-border/50 my-1"/>
+                                <DropdownMenuItem onClick={addRow} className="cursor-pointer gap-2 mb-1">
+                                    <Plus className="h-4 w-4 text-green-600" /> Insert Empty Row
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handlePasteAsNewColumn} className="cursor-pointer gap-2 mb-1">
+                                    <Plus className="h-4 w-4 text-green-600" /> Insert Custom Column
+                                </DropdownMenuItem>
+                                <div className="h-px bg-border/50 my-1"/>
+                                <DropdownMenuItem onClick={() => setIsColumnDialogOpen(true)} className="cursor-pointer gap-2 mb-1">
+                                    <Columns className="h-4 w-4 text-primary" /> Manage Columns
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setHideEmpty(!hideEmpty)} className="cursor-pointer gap-2">
+                                    {hideEmpty ? <EyeOff className="h-4 w-4 text-orange-500" /> : <Eye className="h-4 w-4 text-orange-500" />}
+                                    {hideEmpty ? "Disable Strict View" : "Enable Strict View"}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button onClick={addRow} variant="outline" className="shadow-sm">
-                            <Plus className="mr-2 h-4 w-4" /> Add Row
-                        </Button>
-                        <Button onClick={handlePasteAsNewColumn} variant="outline" className="shadow-sm">
-                            <Plus className="mr-2 h-4 w-4" /> Paste New Column
-                        </Button>
-                        <Button onClick={fetchRecords} variant="ghost" size="icon" title="Refresh">
-                            <RefreshCw className="h-4 w-4" />
-                        </Button>
-                        <Button onClick={handleDeleteAll} variant="destructive" size="icon" title="Delete All">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <Button onClick={handleSave} disabled={isSaving} className="shadow-sm">
-                            {isSaving ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Save className="mr-2 h-4 w-4" />
-                            )}
-                            Save Changes
-                        </Button>
-                        <Button
-                            variant={hideEmpty ? "secondary" : "outline"}
-                            onClick={() => setHideEmpty(!hideEmpty)}
-                            className="shadow-sm whitespace-nowrap"
-                            title={hideEmpty ? "Show all columns" : "Show only 100% filled columns (Strict View)"}
-                        >
-                            {hideEmpty ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
-                            {hideEmpty ? "Disable Strict View" : "Enable Strict View"}
+
+                        {/* Primary Save Button */}
+                        <Button onClick={handleSave} disabled={isSaving} className="h-10 px-6 gap-2 shadow-md bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all font-bold">
+                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Save className="h-4 w-4 text-white" />}
+                            Commit Changes
                         </Button>
                     </div>
                 </div>
 
-                {/* Direct Paste Hint */}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-primary/5 px-3 py-1.5 rounded-md border border-primary/10 w-fit">
-                    <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
-                    <span>Tip: You can <b>Ctrl+V</b> anywhere on this page to paste records directly from Excel!</span>
-                </div>
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".xlsx, .xls, .csv" multiple />
 
-                <div className="flex flex-col gap-4 mt-4 p-5 bg-background rounded-xl border shadow-sm">
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+
+
+                {/* Bulk Action Context Toolbar */}
+                {selectedRowIds.size > 0 && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-5 border border-slate-700">
+                        <div className="flex items-center gap-2 font-semibold">
+                            <CheckSquare className="h-5 w-5 text-indigo-400" />
+                            <span>{selectedRowIds.size} Selected</span>
                         </div>
-                        <Input
-                            className="h-12 pl-12 text-lg shadow-inner bg-muted/20 focus-visible:bg-background transition-colors"
-                            placeholder="Universal Search..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                        <div className="w-px h-6 bg-slate-700 mx-2" />
+                        <Button variant="ghost" size="sm" onClick={handleBulkExport} className="hover:bg-slate-800 text-slate-200">
+                            <FileDown className="h-4 w-4 mr-2" /> Export
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={handleBulkDelete} className="hover:bg-red-900/50 text-red-400 hover:text-red-300">
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedRowIds(new Set())} className="hover:bg-slate-800 rounded-full h-8 w-8 ml-2">
+                            <X className="h-4 w-4 text-slate-400" />
+                        </Button>
                     </div>
+                )}
 
-                    {activeFilters.length > 0 && (
-                        <div className="flex flex-wrap gap-2 py-2">
-                            {activeFilters.map(filter => (
-                                <span key={filter.id} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                                    <span className="opacity-70">{filter.label}:</span>
-                                    {filter.value}
-                                    <button
-                                        onClick={() => removeFilter(filter.id)}
-                                        className="ml-1 rounded-full p-0.5 hover:bg-primary/20 text-primary"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                        </svg>
-                                    </button>
-                                </span>
-                            ))}
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-muted-foreground text-xs"
-                                onClick={() => setActiveFilters([])}
-                            >
-                                Clear All
-                            </Button>
-                        </div>
-                    )}
-
-                    {!isAddingFilter ? (
-                        <div className="flex items-center justify-between">
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsAddingFilter(true)}
-                                className="border-dashed gap-2"
-                            >
-                                <Plus className="h-4 w-4" />
-                                Add Custom Filter
-                            </Button>
-                            <div className="text-right text-sm text-muted-foreground">
-                                Records Found: <span className="text-primary text-lg font-bold">{filteredRecords.length}</span>
+                {/* Peak Professional Unified Control Bar */}
+                <div className="flex flex-col gap-4 bg-background p-5 rounded-2xl border-2 border-primary/5 shadow-2xl mt-6 relative overflow-hidden group">
+                    {/* Decorative Background Element */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+                    
+                    <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-4 relative z-10">
+                        {/* Universal Search Section */}
+                        <div className="relative w-full xl:w-[280px] shrink-0">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-1.5 block">Universal Search</Label>
+                            <div className="relative">
+                                <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-primary/40 group-focus-within:text-primary transition-colors" />
+                                <Input
+                                    className="h-11 pl-10 text-sm font-semibold shadow-inner bg-muted/20 border-primary/10 hover:border-primary/30 focus-visible:ring-primary/20 transition-all rounded-xl"
+                                    placeholder="Type anything..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                             </div>
                         </div>
-                    ) : (
-                        <div className="flex flex-col sm:flex-row items-end gap-3 p-4 bg-muted/20 rounded-lg animate-in fade-in slide-in-from-top-2">
-                            <div className="w-full sm:w-1/3 space-y-2">
-                                <label className="text-sm font-medium">Filter By</label>
+
+                        <div className="hidden xl:block w-px h-12 bg-border/50 mx-2 self-end mb-0.5" />
+
+                        {/* Power Filtering Section */}
+                        <div className="flex-1">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-1.5 block">Precise Filtering</Label>
+                            <div className="flex flex-col sm:flex-row items-center gap-3">
                                 <Select value={newFilterField} onValueChange={setNewFilterField}>
-                                    <SelectTrigger className="bg-background">
-                                        <SelectValue placeholder="Select Field" />
+                                    <SelectTrigger className="h-11 w-full sm:w-[200px] text-sm font-bold bg-background shadow-sm rounded-xl border-primary/20 ring-offset-background focus:ring-2 focus:ring-primary/20 transition-all">
+                                        <div className="flex items-center gap-2">
+                                            <Filter className="h-4 w-4 text-primary/50" />
+                                            <SelectValue placeholder="Select Field" />
+                                        </div>
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {FILTER_FIELDS.map(f => (
-                                            <SelectItem key={String(f.key)} value={String(f.key)}>{f.label}</SelectItem>
+                                        {columnDefs.filter(f => !f.key.includes('address') && !f.key.includes('contact') && !f.key.includes('mail') && !f.key.includes('remark') && !f.key.includes('no')).map(f => (
+                                            <SelectItem key={String(f.key)} value={String(f.key)} className="text-sm font-semibold">{f.label}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                            </div>
 
-                            <div className="w-full sm:w-1/3 space-y-2">
-                                <label className="text-sm font-medium">Select Value</label>
                                 <Select value={newFilterValue} onValueChange={setNewFilterValue} disabled={!newFilterField}>
-                                    <SelectTrigger className="bg-background">
-                                        <SelectValue placeholder={!newFilterField ? "Select Field First" : "Select Value"} />
+                                    <SelectTrigger className="h-11 w-full sm:w-[200px] text-sm font-bold bg-background shadow-sm rounded-xl border-primary/20 ring-offset-background focus:ring-2 focus:ring-primary/20 transition-all">
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-primary/50" />
+                                            <SelectValue placeholder="Select Value" />
+                                        </div>
                                     </SelectTrigger>
-                                    <SelectContent className="max-h-[200px]">
-                                        {getAvailableValues(newFilterField).map((val: any) => (
-                                            <SelectItem key={String(val)} value={String(val)}>
-                                                {String(val)}
-                                            </SelectItem>
-                                        ))}
+                                    <SelectContent className="max-h-[400px]">
+                                        <div className="p-2 sticky top-0 bg-background z-10 border-b">
+                                            <div className="relative">
+                                                <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                                <Input
+                                                    placeholder="Search..."
+                                                    value={filterValueSearch}
+                                                    onChange={(e) => setFilterValueSearch(e.target.value)}
+                                                    onKeyDown={(e) => e.stopPropagation()}
+                                                    className="h-8 pl-8 text-[11px] bg-muted/30 focus-visible:ring-primary/20"
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="p-1">
+                                            {getAvailableValues(newFilterField)
+                                                .filter(val => String(val).toLowerCase().includes(filterValueSearch.toLowerCase()))
+                                                .map((val: any) => (
+                                                    <SelectItem key={String(val)} value={String(val)} className="text-sm font-semibold">{String(val)}</SelectItem>
+                                                ))
+                                            }
+                                        </div>
                                     </SelectContent>
                                 </Select>
-                            </div>
 
-                            <div className="flex gap-2">
-                                <Button onClick={handleAddFilter} disabled={!newFilterField || !newFilterValue}>
-                                    Apply Filter
-                                </Button>
-                                <Button variant="ghost" onClick={() => setIsAddingFilter(false)}>
-                                    Cancel
+                                <Button size="lg" className="h-11 px-6 text-xs font-black shadow-lg bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-xl w-full sm:w-auto gap-2" onClick={handleAddFilter} disabled={!newFilterField || !newFilterValue}>
+                                    <Plus className="h-4 w-4" /> Apply
                                 </Button>
                             </div>
                         </div>
-                    )}
+
+                        <div className="hidden xl:block w-px h-12 bg-border/50 mx-2 self-end mb-0.5" />
+
+                        {/* Action Suite */}
+                        <div className="shrink-0">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-1.5 block">Actions & Export</Label>
+                            <div className="flex items-center gap-3">
+                                <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
+                                    <SelectTrigger className="h-11 w-[140px] shadow-sm font-bold border-primary/20 bg-background text-[11px] rounded-xl">
+                                        <ArrowUpDown className="h-3.5 w-3.5 mr-2" />
+                                        <SelectValue placeholder="Sort" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="date-desc" className="text-xs font-medium">Newest to Oldest</SelectItem>
+                                        <SelectItem value="date-asc" className="text-xs font-medium">Oldest to Newest</SelectItem>
+                                        <SelectItem value="company-asc" className="text-xs font-medium">Company (A-Z)</SelectItem>
+                                        <SelectItem value="company-desc" className="text-xs font-medium">Company (Z-A)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="h-11 px-4 text-xs font-black shadow-sm border-2 border-primary/10 hover:bg-primary/5 transition-all rounded-xl gap-2">
+                                            <Download className="h-4 w-4 text-primary" /> Export
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl">
+                                        <DropdownMenuItem onClick={handleDownload} className="cursor-pointer gap-2 py-2.5 text-xs font-bold">
+                                            <Download className="h-4 w-4 text-blue-600" /> Current View
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={handleMultipleExport} className="cursor-pointer gap-2 py-2.5 text-xs font-bold">
+                                            <Download className="h-4 w-4 text-blue-600" /> Master Multi-Sheet
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+
+                                <div className="h-11 flex items-center px-4 rounded-xl bg-primary/5 border border-primary/10 text-primary font-black text-xs min-w-[100px] justify-center shadow-inner">
+                                    {filteredRecords.length} Items
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                {/* Active Filter Chips */}
+                {activeFilters.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 mt-3 px-1">
+                        {activeFilters.map(filter => (
+                            <Badge key={filter.id} variant="secondary" className="px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 bg-primary/10 text-primary border-primary/20 animate-in zoom-in-95">
+                                <span className="opacity-70">{filter.label}:</span>
+                                {filter.value}
+                                <button onClick={() => removeFilter(filter.id)} className="ml-1 rounded-full hover:bg-primary/20 p-0.5 transition-colors">
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </Badge>
+                        ))}
+                        <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-destructive hover:bg-destructive/10" onClick={() => setActiveFilters([])}>
+                            Clear All Filters
+                        </Button>
+                    </div>
+                )}
             </CardHeader>
-            <CardContent className="p-0">
-                <div className="rounded-none border-t overflow-x-auto relative">
-                    <Table className="min-w-[1800px] border-collapse">
-                        <TableHeader className="bg-muted/30">
-                            <TableRow className="hover:bg-transparent border-b-2">
-                                <TableHead className="w-12 text-center sticky left-0 z-20 bg-muted/95 backdrop-blur font-bold border-r shadow-[2px_0_5px_rgba(0,0,0,0.05)]">#</TableHead>
+            <CardContent className="p-0 relative">
+                {/* Thinned Professional Top Scrollbar */}
+                <div 
+                    ref={topScrollRef}
+                    className="overflow-x-auto overflow-y-hidden border-b h-3 bg-muted/20 custom-scrollbar relative z-10"
+                >
+                    <div style={{ width: `${tableScrollWidth}px` }} className="h-px block" />
+                </div>
+
+                <div 
+                    ref={tableRef} 
+                    className="rounded-none overflow-auto relative shadow-sm select-none max-h-[70vh] custom-scrollbar focus:outline-none border" 
+                    tabIndex={0}
+                >
+                    {/* Floating Scroll to Top Button (Fixed for maximum visibility) */}
+                    {showScrollTop && (
+                        <div className="fixed bottom-10 right-10 z-[60] flex justify-end">
+                            <Button
+                                onClick={scrollToTop}
+                                className="rounded-full w-14 h-14 shadow-2xl bg-primary hover:bg-primary/90 text-white flex items-center justify-center animate-in fade-in slide-in-from-bottom-4 transition-all hover:scale-110 active:scale-95 border-2 border-white/20"
+                                size="icon"
+                            >
+                                <ArrowUp className="h-7 w-7" />
+                            </Button>
+                        </div>
+                    )}
+                    <Table className="min-w-[1800px] border-separate border-spacing-0 shadow-sm border-none">
+                        <TableHeader className="sticky top-0 z-30 bg-white/95 backdrop-blur shadow-sm">
+                            <TableRow className="hover:bg-transparent border-b">
+                                <TableHead className="w-10 text-center sticky left-0 top-0 z-50 bg-white border-b border-r shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
+                                    <Checkbox 
+                                        checked={rowsToShow?.length > 0 && selectedRowIds.size === rowsToShow.length}
+                                        onCheckedChange={handleSelectAll}
+                                    />
+                                </TableHead>
+                                <TableHead className="w-12 text-center sticky left-[40px] top-0 z-50 bg-white font-bold border-b border-r shadow-[2px_0_5px_rgba(0,0,0,0.02)]">#</TableHead>
                                 {visibleColumns.map((col, index) => (
                                     <TableHead
                                         key={col.key}
-                                        className="h-10 px-2 font-bold text-primary select-none bg-muted/50 border-r border-b relative group min-w-[150px]"
+                                        className="h-12 px-2 font-bold text-primary select-none bg-white border-b border-r relative group min-w-[150px] sticky top-0 z-30"
                                         onDoubleClick={() => {
                                             setEditingHeaderKey(col.key);
                                             setTempHeaderName(col.label);
@@ -1297,7 +1486,7 @@ export function PlacementRecordTable() {
                                         )}
                                     </TableHead>
                                 ))}
-                                <TableHead className="text-right w-16 sticky right-0 z-20 bg-muted/95 backdrop-blur font-bold border-l shadow-[-2px_0_5px_rgba(0,0,0,0.05)]">Actions</TableHead>
+                                <TableHead className="text-right w-24 sticky right-0 top-0 z-50 bg-white border-b border-l shadow-[-2px_0_5px_rgba(0,0,0,0.05)] font-bold">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody
@@ -1319,19 +1508,26 @@ export function PlacementRecordTable() {
                                 </TableRow>
                             ) : (
                                 rowsToShow.map((record, rowIndex) => (
-                                    <TableRow key={record.id || rowIndex} className="group transition-colors hover:bg-muted/30">
-                                        <TableCell className="font-medium text-muted-foreground">{rowIndex + 1}</TableCell>
+                                    <TableRow key={record.id || rowIndex} className="group transition-colors hover:bg-muted/30 border-b">
+                                        <TableCell className="sticky left-0 bg-background z-10 border-r border-b text-center shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
+                                            <Checkbox 
+                                                checked={selectedRowIds.has((record.id || `temp-${rowIndex}`) as string)}
+                                                onCheckedChange={() => handleSelectRow((record.id || `temp-${rowIndex}`) as string)}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="font-medium text-muted-foreground sticky left-[40px] bg-background z-10 border-r border-b text-center shadow-[2px_0_5px_rgba(0,0,0,0.02)]">{rowIndex + 1}</TableCell>
 
                                         {/* Unified Columns Loop */}
                                         {visibleColumns.map((colDef, colIndex) => {
                                             const field = colDef.key;
+                                            const cellValue = colDef.isCustom ? record.other_details?.[field] : (record as any)[field];
                                             const globalColIndex = colIndex;
                                             const isSelected = isCellInSelection(rowIndex, globalColIndex);
                                             const isEditing = editingCell?.row === rowIndex && editingCell?.col === globalColIndex;
                                             const isDragFill = isCellInDragFill(rowIndex, globalColIndex);
 
                                             // Determine cell style
-                                            let cellClass = "p-0 border h-10 relative cursor-cell ";
+                                            let cellClass = "p-0 border-r border-b h-10 relative cursor-cell ";
                                             if (isSelected) cellClass += "bg-blue-50 ring-1 ring-primary ring-inset ";
                                             if (isDragFill) cellClass += "bg-blue-100 ";
                                             if (selectedCell?.row === rowIndex && selectedCell?.col === globalColIndex && !isEditing) cellClass += "ring-2 ring-primary z-10 ";
@@ -1400,19 +1596,33 @@ export function PlacementRecordTable() {
                                                             />
                                                         )
                                                     ) : (
-                                                        <div className="w-full h-full px-2 flex items-center overflow-hidden whitespace-nowrap text-ellipsis">
-                                                            {record[field]}
+                                                        <div className="truncate px-2 py-1.5 select-none min-h-[32px] flex items-center">
+                                                            {field === 'salary_package' && cellValue ? (
+                                                                <span className="font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-800">
+                                                                    {String(cellValue).includes('LPA') || String(cellValue).includes('₹') ? cellValue : `₹ ${cellValue}`}
+                                                                </span>
+                                                            ) : field === 'v_visit_type' && cellValue ? (
+                                                                <Badge variant="outline" className={`font-semibold ${String(cellValue).toLowerCase().includes('on campus') ? 'border-blue-200 text-blue-700 bg-blue-50' : 'border-purple-200 text-purple-700 bg-purple-50'}`}>
+                                                                    {String(cellValue)}
+                                                                </Badge>
+                                                            ) : field === 'remark' && cellValue ? (
+                                                                <Badge variant="outline" className={`font-semibold ${String(cellValue).toLowerCase().includes('completed') ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-amber-200 text-amber-700 bg-amber-50'}`}>
+                                                                    {String(cellValue)}
+                                                                </Badge>
+                                                            ) : (
+                                                                cellValue !== undefined && cellValue !== "" ? String(cellValue) : <span className="text-muted-foreground opacity-50">-</span>
+                                                            )}
                                                         </div>
                                                     )}
 
-                                                    {/* Drag Handle (bottom-right of selection end) */}
-                                                    {selectedCell && selectionEnd === null && selectedCell.row === rowIndex && selectedCell.col === globalColIndex && (
+                                                    {/* Drag Fill Handle */}
+                                                    {isSelected && !isEditing && (
                                                         <div
                                                             className="absolute bottom-[-4px] right-[-4px] w-3 h-3 bg-primary border-2 border-white cursor-crosshair z-20"
                                                             onMouseDown={(e) => {
                                                                 e.stopPropagation();
                                                                 setIsDragging(true);
-                                                                setDragEnd(selectedCell);
+                                                                setDragEnd({ row: rowIndex, col: globalColIndex });
                                                             }}
                                                         />
                                                     )}
@@ -1421,14 +1631,47 @@ export function PlacementRecordTable() {
                                         })}
 
                                         <TableCell className="text-right sticky right-0 bg-background/95 backdrop-blur-sm shadow-[-2px_0_5px_rgba(0,0,0,0.05)] border-l">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => removeRow(rowIndex, record)}
-                                                className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-full transition-all"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            <div className="flex justify-end gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => { setEditingRow(record); setIsRowDialogOpen(true); }}
+                                                    className="text-primary hover:bg-primary/10 hover:text-primary h-8 w-8 rounded-full transition-all"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-full transition-all"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                                                                <Trash2 className="h-5 w-5" /> Delete Record?
+                                                            </AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Are you sure you want to delete this record for <b>{record.v_company_name || 'this company'}</b>? 
+                                                                This action cannot be undone.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction 
+                                                                onClick={() => removeRow(rowIndex, record)}
+                                                                className="bg-destructive hover:bg-destructive/90 rounded-xl"
+                                                            >
+                                                                Delete Record
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -1481,6 +1724,113 @@ export function PlacementRecordTable() {
                             onChange={(e) => setNewColumnName(e.target.value)}
                         />
                         <Button onClick={addCustomColumn} size="sm">Add</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Row Edit Dialog - Professional Modal */}
+            <Dialog open={isRowDialogOpen} onOpenChange={setIsRowDialogOpen}>
+                <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl rounded-3xl overflow-hidden bg-background/95 backdrop-blur-xl">
+                    <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 border-b border-primary/10">
+                        <DialogHeader>
+                            <div className="flex items-center gap-3 mb-1">
+                                <div className="p-2.5 bg-primary/10 rounded-2xl">
+                                    <Pencil className="h-5 w-5 text-primary" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-xl font-black text-primary/90">Edit Placement Record</DialogTitle>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mt-1">Visit Session Details</p>
+                                </div>
+                            </div>
+                        </DialogHeader>
+                    </div>
+
+                    <div className="p-8 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                            {columnDefs.map((col) => (
+                                <div key={col.key} className="space-y-2 group">
+                                    <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground group-focus-within:text-primary transition-colors flex items-center gap-2">
+                                        {col.key === 'v_company_name' && <Building className="h-3 w-3" />}
+                                        {col.key === 'date_of_visit' && <Calculator className="h-3 w-3" />}
+                                        {col.key === 'salary_package' && <DollarSign className="h-3 w-3" />}
+                                        {col.label}
+                                    </Label>
+                                    {col.key === 'v_visit_type' ? (
+                                        <Select 
+                                            value={editingRow?.[col.key] || ''} 
+                                            onValueChange={(val) => setEditingRow(prev => prev ? { ...prev, [col.key]: val } : null)}
+                                        >
+                                            <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-primary/10 hover:border-primary/30 transition-all font-semibold focus:ring-primary/20">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-xl p-1">
+                                                <SelectItem value="On Campus">On Campus</SelectItem>
+                                                <SelectItem value="Off Campus">Off Campus</SelectItem>
+                                                <SelectItem value="Direct">Direct</SelectItem>
+                                                <SelectItem value="Phone Call">Phone Call</SelectItem>
+                                                <SelectItem value="Pooled">Pooled</SelectItem>
+                                                <SelectItem value="Hackathon">Hackathon</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    ) : col.key === 'company_type' ? (
+                                        <Select 
+                                            value={editingRow?.[col.key] || ''} 
+                                            onValueChange={(val) => setEditingRow(prev => prev ? { ...prev, [col.key]: val } : null)}
+                                        >
+                                            <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-primary/10 hover:border-primary/30 transition-all font-semibold focus:ring-primary/20">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-xl p-1">
+                                                <SelectItem value="IT">IT</SelectItem>
+                                                <SelectItem value="CORE">CORE</SelectItem>
+                                                <SelectItem value="BPO">BPO</SelectItem>
+                                                <SelectItem value="OTHER">OTHER</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <Input
+                                            value={col.isCustom ? (editingRow?.other_details?.[col.key] || '') : (editingRow?.[col.key] || '')}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setEditingRow(prev => {
+                                                    if (!prev) return null;
+                                                    if (col.isCustom) {
+                                                        const other = { ...(prev.other_details || {}), [col.key]: val };
+                                                        return { ...prev, other_details: other };
+                                                    }
+                                                    return { ...prev, [col.key]: val };
+                                                });
+                                            }}
+                                            className="h-11 rounded-xl bg-muted/30 border-primary/10 hover:border-primary/20 transition-all font-semibold focus-visible:ring-primary/20"
+                                            placeholder={`Enter ${col.label}...`}
+                                            type={col.key === 'date_of_visit' ? 'date' : 'text'}
+                                        />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex items-center gap-4 pt-4">
+                            <Button 
+                                className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all gap-2"
+                                onClick={() => {
+                                    if (editingRow) {
+                                        setRecords(prev => prev.map(r => r.id === editingRow.id ? editingRow : r));
+                                        saveBatchChanges([editingRow]);
+                                        setIsRowDialogOpen(false);
+                                    }
+                                }}
+                            >
+                                <Save className="h-4 w-4" /> Save Record Details
+                            </Button>
+                            <Button 
+                                variant="outline" 
+                                className="h-12 px-6 rounded-2xl font-black uppercase tracking-widest text-[10px] border-2 border-primary/5 hover:bg-primary/5 transition-all"
+                                onClick={() => setIsRowDialogOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>

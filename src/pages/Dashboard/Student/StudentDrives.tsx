@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { 
   Building2, Calendar, MapPin, Briefcase, ChevronRight, 
-  CheckCircle2, AlertCircle, Info, Loader2, FileText, CheckCircle, Plus 
+  CheckCircle2, AlertCircle, Info, Loader2, FileText, CheckCircle, Plus,
+  DollarSign, Globe, Linkedin, ExternalLink, Target
 } from "lucide-react";
 import {
   Dialog,
@@ -28,6 +29,7 @@ export default function StudentDrives() {
   const queryClient = useQueryClient();
   const [selectedDrive, setSelectedDrive] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
 
   // Fetch Student Profile for eligibility check
@@ -60,7 +62,18 @@ export default function StudentDrives() {
         return [];
       }
 
-      // 2. Get all eligible department entries for this student's department
+      // 2. Fetch all applications for this student to check current status
+      const { data: studentApplications } = await supabase
+        .from('placement_applications' as any)
+        .select('*')
+        .eq('student_id', user?.id);
+
+      const appMap = new Map();
+      (studentApplications || []).forEach((app: any) => {
+        appMap.set(app.drive_id, app);
+      });
+
+      // 3. Get all eligible department entries for this student's department
       const { data: eligibleEntries } = await supabase
         .from('drive_eligible_departments')
         .select('drive_id')
@@ -72,7 +85,7 @@ export default function StudentDrives() {
 
       const driveIds = eligibleEntries.map(e => e.drive_id);
 
-      // 3. Fetch those specific drives with status = scheduled
+      // 4. Fetch those specific drives with status = scheduled
       const { data: allDrives, error: driveError } = await supabase
         .from('placement_drives')
         .select(`
@@ -89,7 +102,13 @@ export default function StudentDrives() {
           min_12th_mark,
           job_description,
           work_location,
+          bond_details,
           application_deadline,
+          company_website,
+          company_linkedin,
+          other_links,
+          max_history_arrears,
+          remarks,
           status,
           companies (name),
           drive_eligible_departments (department_id)
@@ -100,9 +119,7 @@ export default function StudentDrives() {
 
       if (driveError) throw driveError;
 
-      // 4. Temporarily use an empty map for applications (feature coming later)
-      const appMap = new Map();
-
+      // 5. Map applications to drives
       return (allDrives || []).map(drive => {
         const application = appMap.get(drive.id);
         return {
@@ -118,23 +135,25 @@ export default function StudentDrives() {
 
   const handleApply = async () => {
     if (!selectedDrive || isApplying) return;
-    
     setIsApplying(true);
+
     try {
-      const { error } = await supabase
-        .from("placement_applications")
-        .insert([{
-          drive_id: selectedDrive.id,
-          student_id: user?.id,
-          status: "pending_hod",
-          resume_url: profile?.resume_url
-        }]);
+      const { data, error } = await supabase
+        .rpc('safe_apply_for_drive', {
+          p_drive_id: selectedDrive.id,
+          p_student_id: user?.id,
+          p_resume_url: profile?.resume_url || null
+        });
 
       if (error) throw error;
-      
-      toast.success("Application submitted successfully!");
-      queryClient.invalidateQueries({ queryKey: ["student-eligible-drives"] });
-      setIsDetailsOpen(false);
+
+      if (data?.success === false) {
+        toast.error(data.message || "You have already applied for this drive!");
+      } else {
+        setIsSuccessOpen(true);
+        queryClient.invalidateQueries({ queryKey: ["student-eligible-drives"] });
+        setIsDetailsOpen(false);
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to apply");
     } finally {
@@ -186,11 +205,25 @@ export default function StudentDrives() {
                   <Building2 className="h-6 w-6 text-primary" />
                 </div>
                 {drive.applicationStatus ? (
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                    <CheckCircle className="h-3 w-3 mr-1" /> {drive.applicationStatus.replace(/_/g, ' ').toUpperCase()}
+                  <Badge 
+                    variant="outline" 
+                    className={
+                      drive.applicationStatus.includes('rejected') 
+                        ? "bg-red-50 text-red-700 border-red-300 font-bold" 
+                        : "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold"
+                    }
+                  >
+                    {drive.applicationStatus === 'pending_hod' || drive.applicationStatus === 'approved_by_hod' 
+                      ? 'APPLIED' 
+                      : drive.applicationStatus === 'rejected_by_hod' 
+                        ? 'HOD REJECTED' 
+                        : drive.applicationStatus === 'rejected_by_tpo' 
+                          ? 'TPO REJECTED' 
+                          : drive.applicationStatus.replace(/_/g, ' ').toUpperCase()
+                    }
                   </Badge>
                 ) : (
-                  <Badge className="bg-blue-600">AVAILABLE</Badge>
+                  <Badge className="bg-slate-900 text-white font-bold tracking-wider">AVAILABLE</Badge>
                 )}
               </div>
               <CardTitle className="mt-4">{drive.companies?.name}</CardTitle>
@@ -207,10 +240,14 @@ export default function StudentDrives() {
                 <MapPin className="h-4 w-4" />
                 <span>{drive.work_location || "Not specified"}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm font-bold text-primary">
-                <Info className="h-4 w-4" />
-                <span>₹{(drive.ctc_amount || 0).toFixed(1)} LPA</span>
-              </div>
+              {drive.ctc_amount ? (
+                <div className="flex items-center gap-2 text-sm font-bold text-primary">
+                  <Info className="h-4 w-4" />
+                  <span>₹{drive.ctc_amount >= 1000 ? (drive.ctc_amount / 100000).toFixed(1) : drive.ctc_amount} LPA</span>
+                </div>
+              ) : (
+                <Badge variant="outline" className="text-[10px] text-muted-foreground font-normal">TBD / Internship</Badge>
+              )}
             </CardContent>
             <CardFooter className="pt-0">
               <Button 
@@ -259,50 +296,131 @@ export default function StudentDrives() {
               <ScrollArea className="flex-1 p-6 pt-0">
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="p-3 bg-muted/50 rounded-lg">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">CTC Package</p>
-                      <p className="font-bold text-primary">₹{selectedDrive.ctc_amount} LPA</p>
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl relative shadow-sm">
+                      <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">Package (CTC)</p>
+                      <p className="font-bold text-xl text-slate-900">₹{selectedDrive.ctc_amount >= 1000 ? (selectedDrive.ctc_amount / 100000).toFixed(1) : selectedDrive.ctc_amount} LPA</p>
                     </div>
-                    <div className="p-3 bg-muted/50 rounded-lg">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Location</p>
-                      <p className="font-bold">{selectedDrive.work_location || "PAN India"}</p>
+                    {selectedDrive.stipend_amount && (
+                      <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                        <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">Stipend</p>
+                        <p className="font-bold text-xl text-slate-900">₹{selectedDrive.stipend_amount.toLocaleString()}/mo</p>
+                      </div>
+                    )}
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                      <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">Work Location</p>
+                      <p className="font-bold text-sm text-slate-800 truncate">{selectedDrive.work_location || "PAN India"}</p>
                     </div>
-                    <div className="p-3 bg-muted/50 rounded-lg text-destructive">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Deadline</p>
-                      <p className="font-bold">{selectedDrive.application_deadline ? new Date(selectedDrive.application_deadline).toLocaleDateString() : "ASAP"}</p>
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                      <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">Visit Mode</p>
+                      <p className="font-bold text-sm text-slate-800 uppercase">{selectedDrive.visit_mode.replace(/_/g, ' ')}</p>
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h4 className="font-bold flex items-center gap-2"><FileText className="h-4 w-4" /> Job Description</h4>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {selectedDrive.job_description || "No description provided."}
-                    </p>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-4">
-                    <h4 className="font-bold">Eligibility Details</h4>
-                    <div className="grid grid-cols-2 gap-y-3 text-sm">
-                      <div className="flex justify-between pr-4"><span>Min CGPA:</span> <span className="font-bold">{selectedDrive.min_cgpa}</span></div>
-                      <div className="flex justify-between pr-4"><span>Max Backlogs:</span> <span className="font-bold">{selectedDrive.max_backlogs}</span></div>
-                      <div className="flex justify-between pr-4"><span>10th Mark:</span> <span className="font-bold">{selectedDrive.min_10th_mark}%</span></div>
-                      <div className="flex justify-between pr-4"><span>12th Mark:</span> <span className="font-bold">{selectedDrive.min_12th_mark}%</span></div>
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                      <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">App. Deadline</p>
+                      <p className="font-bold text-sm text-slate-800">{selectedDrive.application_deadline ? new Date(selectedDrive.application_deadline).toLocaleDateString() : "Open Application"}</p>
                     </div>
                   </div>
 
-                  {selectedDrive.bond_details && (
-                    <div className="p-4 bg-orange-50 border border-orange-100 rounded-lg">
-                      <p className="text-xs font-bold text-orange-800 uppercase mb-1">Bond & Terms</p>
-                      <p className="text-sm text-orange-700">{selectedDrive.bond_details}</p>
+                  {/* Company Digital Assets */}
+                  {(selectedDrive.company_website || selectedDrive.company_linkedin || selectedDrive.other_links) && (
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-wrap gap-3">
+                      {selectedDrive.company_website && (
+                        <a href={selectedDrive.company_website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:border-slate-800 hover:text-slate-900 transition-all shadow-sm">
+                          <Globe className="h-3 w-3" /> Website
+                        </a>
+                      )}
+                      {selectedDrive.company_linkedin && (
+                        <a href={selectedDrive.company_linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:border-slate-800 hover:text-slate-900 transition-all shadow-sm">
+                          <Linkedin className="h-3 w-3" /> LinkedIn
+                        </a>
+                      )}
+                      {selectedDrive.other_links && (
+                        <a href={selectedDrive.other_links} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:border-slate-800 hover:text-slate-900 transition-all shadow-sm">
+                          <ExternalLink className="h-3 w-3" /> Digital Resources
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <h4 className="font-bold flex items-center gap-2 text-slate-900">
+                      <FileText className="h-5 w-5 text-slate-600" /> 
+                      Professional Job Description
+                    </h4>
+                    <div className="p-5 bg-white rounded-xl border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                      {selectedDrive.job_description || "Detailed requirements as specified by the organization."}
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <h4 className="font-bold flex items-center gap-2 text-slate-900 border-b pb-2">
+                        <Target className="h-5 w-5 text-slate-500" />
+                        Eligibility Criteria
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
+                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Min CGPA</p>
+                          <p className="font-bold text-slate-900">{selectedDrive.min_cgpa}</p>
+                        </div>
+                        <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
+                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Max Backlogs</p>
+                          <p className="font-bold text-slate-900">{selectedDrive.max_backlogs}</p>
+                        </div>
+                        <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
+                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Max History</p>
+                          <p className="font-bold text-slate-900">{selectedDrive.max_history_arrears || 0}</p>
+                        </div>
+                        <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
+                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">10th Mark</p>
+                          <p className="font-bold text-slate-900">{selectedDrive.min_10th_mark}%</p>
+                        </div>
+                        <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
+                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">12th Mark</p>
+                          <p className="font-bold text-slate-900">{selectedDrive.min_12th_mark}%</p>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-slate-100/50 border border-slate-200 rounded-lg">
+                        <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Target Batches</p>
+                        <p className="text-sm font-bold text-slate-900">{selectedDrive.eligible_batches || "2021-2025"}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="font-bold flex items-center gap-2 text-slate-900 border-b pb-2">
+                        <Info className="h-5 w-5 text-slate-500" />
+                        Organizational Details
+                      </h4>
+                      <div className="space-y-3">
+                        {selectedDrive.bond_details && (
+                          <div className="p-4 border border-slate-200 rounded-xl bg-white shadow-sm">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Bond & Terms</p>
+                            <p className="text-sm text-slate-800 font-semibold">{selectedDrive.bond_details}</p>
+                          </div>
+                        )}
+                        <div className="p-4 border border-slate-200 rounded-xl bg-white shadow-sm">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Visit Classification</p>
+                          <p className="text-sm font-bold text-slate-800 uppercase leading-none">{selectedDrive.drive_type}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedDrive.remarks && (
+                    <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl space-y-3">
+                      <h4 className="font-bold flex items-center gap-2 text-slate-800 uppercase text-xs tracking-widest">
+                        <Info className="h-4 w-4 text-slate-500" /> 
+                        Officer's Directives & Instructions
+                      </h4>
+                      <p className="text-sm text-slate-700 leading-relaxed font-medium">
+                        {selectedDrive.remarks}
+                      </p>
                     </div>
                   )}
 
                   {selectedDrive.applicationStatus === 'interview_scheduled' && selectedDrive.applicationDetails?.interview_timestamp && (
-                    <div className="p-4 bg-purple-50 border border-purple-100 rounded-lg">
-                      <p className="text-xs font-bold text-purple-800 uppercase mb-1">Interview Scheduled</p>
-                      <p className="text-sm text-purple-700 font-bold">
+                    <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-lg ring-1 ring-white/10">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Scheduled Interview Slot</p>
+                      <p className="text-lg text-white font-bold">
                         {new Date(selectedDrive.applicationDetails.interview_timestamp).toLocaleString('en-IN', {
                           dateStyle: 'full',
                           timeStyle: 'short'
@@ -311,11 +429,11 @@ export default function StudentDrives() {
                     </div>
                   )}
 
-                  {selectedDrive.applicationStatus === 'rejected_by_hod' || selectedDrive.applicationStatus === 'rejected_by_tpo' && (
-                    <div className="p-4 bg-red-50 border border-red-100 rounded-lg">
-                      <p className="text-xs font-bold text-red-800 uppercase mb-1">Application Rejected</p>
+                  {(selectedDrive.applicationStatus === 'rejected_by_hod' || selectedDrive.applicationStatus === 'rejected_by_tpo') && (
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
+                      <p className="text-xs font-bold text-red-800 uppercase mb-1">Feedback from Coordinator</p>
                       <p className="text-sm text-red-700">
-                        {selectedDrive.applicationDetails?.rejection_reason || "Unfortunately, your application was not selected for this drive."}
+                        {selectedDrive.applicationDetails?.rejection_reason || "Unfortunately, your application was not selected for this drive by your department coordinator."}
                       </p>
                     </div>
                   )}
@@ -333,14 +451,66 @@ export default function StudentDrives() {
                     {isApplying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                     Confirm & Apply
                   </Button>
+                ) : selectedDrive.applicationStatus.includes('rejected') ? (
+                  <Button className="bg-red-600 disabled:opacity-100" disabled>
+                    <AlertCircle className="mr-2 h-4 w-4" /> Application Rejected
+                  </Button>
                 ) : (
-                  <Button className="bg-green-600 disabled:opacity-100" disabled>
+                  <Button className="bg-emerald-600 disabled:opacity-100" disabled>
                     <CheckCircle2 className="mr-2 h-4 w-4" /> Application Submitted
                   </Button>
                 )}
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Success Dialog */}
+      <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
+        <DialogContent className="max-w-md p-8 text-center space-y-6">
+          <div className="flex flex-col items-center">
+            <div className="h-20 w-20 rounded-full bg-slate-900 flex items-center justify-center mb-6 shadow-xl ring-4 ring-slate-100">
+               <CheckCircle2 className="h-10 w-10 text-white" />
+            </div>
+            <DialogTitle className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-2">
+              Application<br/>Submitted!
+            </DialogTitle>
+            <DialogDescription className="text-sm font-medium text-slate-500 uppercase tracking-widest">
+              Success Notification
+            </DialogDescription>
+          </div>
+
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Company Identified</p>
+             <p className="font-bold text-slate-800">{selectedDrive?.companies?.name}</p>
+             <p className="text-xs text-slate-500">{selectedDrive?.role_offered}</p>
+          </div>
+
+          <div className="space-y-4 text-left border-t pt-6">
+             <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3">Next Steps in Selection</h4>
+             <div className="space-y-3">
+                <div className="flex items-start gap-4">
+                   <div className="h-5 w-5 rounded-full border border-slate-900 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</div>
+                   <div className="space-y-0.5">
+                      <p className="text-xs font-bold text-slate-800 leading-none">HOD Verification</p>
+                      <p className="text-[10px] text-slate-500">Department head will verify your primary eligibility.</p>
+                   </div>
+                </div>
+                <div className="flex items-start gap-4">
+                   <div className="h-5 w-5 rounded-full border border-slate-200 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 text-slate-400">2</div>
+                   <div className="space-y-0.5">
+                      <p className="text-xs font-bold text-slate-400 leading-none">TPO Review</p>
+                      <p className="text-[10px] text-slate-400">Placement cell will finalize your application for shortlisting.</p>
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          <DialogFooter>
+             <Button variant="outline" className="w-full h-12 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white font-black uppercase text-xs tracking-widest transition-all" onClick={() => setIsSuccessOpen(false)}>
+                Acknowledge & Close
+             </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

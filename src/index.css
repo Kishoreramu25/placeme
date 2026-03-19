@@ -210,6 +210,26 @@
   .sidebar-link-active {
     @apply bg-sidebar-accent text-sidebar-primary font-medium;
   }
+
+  /* Professional Sleek Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-background border-l border-border/50;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.05);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-primary/20 rounded-full border-[3px] border-solid border-background transition-colors;
+    box-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/40;
+  }
 }
 
 @layer utilities {

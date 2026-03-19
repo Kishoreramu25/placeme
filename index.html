@@ -23,6 +23,23 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+  <script>
+    window.addEventListener('error', function(e) {
+      document.body.innerHTML += '<div style="color:#ffcccc;padding:40px;font-family:monospace;z-index:99999;position:fixed;top:0;left:0;background:#990000;width:100vw;height:100vh;overflow:auto;">' + 
+        '<h2>REACT CRASH TRACER</h2>' +
+        '<p style="font-size: 1.2rem; font-weight: bold;">' + e.message + '</p>' +
+        '<p>' + e.filename + ':' + e.lineno + '</p>' +
+        '<pre style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">' + (e.error && e.error.stack) + '</pre>' +
+      '</div>';
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      document.body.innerHTML += '<div style="color:#ffcccc;padding:40px;font-family:monospace;z-index:99999;position:fixed;top:0;left:0;background:#990000;width:100vw;height:100vh;overflow:auto;">' + 
+        '<h2>REACT PROMISE REJECTION TRACER</h2>' +
+        '<p style="font-size: 1.2rem; font-weight: bold;">' + e.reason + '</p>' +
+        '<pre style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">' + (e.reason && e.reason.stack) + '</pre>' +
+      '</div>';
+    });
+  </script>
 </body>
 
 </html>

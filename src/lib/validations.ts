@@ -82,6 +82,9 @@ export const driveSchema = z.object({
   min_10th_mark: z.number().min(0).max(100).optional().default(0),
   min_12th_mark: z.number().min(0).max(100).optional().default(0),
   application_deadline: z.string().nullish(),
+  company_website: z.string().trim().nullish().or(z.literal("")),
+  company_linkedin: z.string().trim().nullish().or(z.literal("")),
+  other_links: z.string().trim().nullish().or(z.literal("")),
 });
 
 export type DriveFormData = z.infer<typeof driveSchema>;
@@ -115,31 +118,63 @@ export const studentMasterSchema = z.object({
   mother_tongue: z.string().nullish(),
   nationality: z.string().nullish(),
   state: z.string().nullish(),
+  district: z.string().nullish(),
+  alternate_email: z.string().nullish(),
+  whatsapp_number: z.string().nullish(),
+  pan_number: z.string().nullish(),
+  passport_available: z.string().nullish(),
+  passport_number: z.string().nullish(),
+  hostel_name: z.string().nullish(),
   // Academic - Schooling
   tenth_mark: z.string().nullish(),
+  tenth_percentage: z.string().nullish(),
+  tenth_school_name: z.string().nullish(),
   tenth_board: z.string().nullish(),
   twelfth_mark: z.string().nullish(),
+  twelfth_percentage: z.string().nullish(),
   twelfth_school_board: z.string().nullish(),
   twelfth_school_name: z.string().nullish(),
   twelfth_school_address: z.string().nullish(),
   twelfth_register_number: z.string().nullish(),
   medium_of_instruction: z.string().nullish(),
+  diploma_studied: z.string().nullish(),
+  diploma_institute_name: z.string().nullish(),
+  diploma_stream: z.string().nullish(),
+  work_experience: z.string().nullish(),
 
   // Academic - College
+  current_year: z.string().nullish(),
   current_cgpa: z.string().nullish(),
+  sem_1_cgpa: z.string().nullish(),
+  sem_2_cgpa: z.string().nullish(),
+  sem_3_cgpa: z.string().nullish(),
+  sem_4_cgpa: z.string().nullish(),
+  sem_5_cgpa: z.string().nullish(),
+  sem_6_cgpa: z.string().nullish(),
+  sem_7_cgpa: z.string().nullish(),
+  sem_8_cgpa: z.string().nullish(),
+  overall_cgpa: z.string().nullish(),
   current_backlogs: z.string().nullish(),
   history_of_arrears_count: z.string().nullish(),
   current_standing_arrear: z.string().nullish(),
   history_of_arrear: z.string().nullish(),
   
-  // Placement Details
+  // Placement details
   resume_url: z.string().nullish(),
+  photo_url: z.string().nullish(),
   skills: z.string().nullish(),
+  programming_languages: z.string().nullish(),
   internship_experience: z.string().nullish(),
   projects: z.string().nullish(),
   certifications: z.string().nullish(),
   preferred_job_role: z.string().nullish(),
   preferred_location: z.string().nullish(),
+  github_url: z.string().nullish(),
+  linkedin_url: z.string().nullish(),
+  hackerrank_url: z.string().nullish(),
+  leetcode_url: z.string().nullish(),
+  interested_in_placement: z.string().nullish(),
+  placement_opt_out_reason: z.string().nullish(),
 
   // Personal & Other
   is_parent_farmer: z.string().nullish(),
@@ -175,6 +210,8 @@ export const studentMasterSchema = z.object({
   current_semester: z.string().nullish(),
   is_hosteller: z.string().nullish(),
   is_transport: z.string().nullish(),
+  is_first_graduate: z.string().nullish(),
+  is_single_parent: z.string().nullish(),
 });
 
 export type StudentMasterFormData = z.infer<typeof studentMasterSchema>;

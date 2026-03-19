@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { STUDENT_COLUMNS } from "@/lib/constants";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Download, Search, CheckCircle, Eye, Filter } from "lucide-react";
+import { Loader2, Download, Search, CheckCircle, Eye, Filter, PartyPopper } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from "xlsx";
@@ -75,13 +76,13 @@ export default function StudentsMaster() {
     XLSX.writeFile(workbook, "Students_Master_Records.xlsx");
   };
 
-  const filteredStudents = students.filter(
-    (s) =>
-      s.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.reg_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.email_address?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStudents = students.filter((s) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return Object.values(s).some(val => 
+      val && String(val).toLowerCase().includes(term)
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -124,63 +125,56 @@ export default function StudentsMaster() {
               </div>
             ) : (
               <div className="rounded-md border overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/50 border-b">
+                <Table className="w-max min-w-full">
+                  <TableHeader className="bg-muted/90 border-b">
                     <TableRow>
-                      <TableHead className="min-w-[150px] text-[10px] uppercase font-black py-4">Student Name</TableHead>
-                      <TableHead className="text-[10px] uppercase font-black">Dept</TableHead>
-                      <TableHead className="text-[10px] uppercase font-black">Reg No</TableHead>
-                      <TableHead className="text-[10px] uppercase font-black">Batch</TableHead>
-                      <TableHead className="text-[10px] uppercase font-black text-center">CGPA</TableHead>
-                      <TableHead className="text-[10px] uppercase font-black text-center">Backlogs</TableHead>
-                      <TableHead className="text-[10px] uppercase font-black text-center">History(A)</TableHead>
-                      <TableHead className="text-[10px] uppercase font-black text-center">10th%</TableHead>
-                      <TableHead className="text-[10px] uppercase font-black text-center">12th%</TableHead>
-                      <TableHead className="min-w-[140px] text-[10px] uppercase font-black">Skills</TableHead>
-                      <TableHead className="text-[10px] uppercase font-black">Status</TableHead>
-                      <TableHead className="text-right text-[10px] uppercase font-black pr-6">Action</TableHead>
+                      <TableHead className="min-w-[70px] text-[10px] uppercase font-black py-4 sticky left-0 z-20 bg-muted/90 text-center backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Action</TableHead>
+                      <TableHead className="min-w-[80px] text-[10px] uppercase font-black sticky left-[70px] z-20 bg-muted/90 backdrop-blur">Status</TableHead>
+                      <TableHead className="min-w-[150px] text-[10px] uppercase font-black py-4 sticky left-[150px] z-20 bg-muted/90 backdrop-blur">Student Name</TableHead>
+                      <TableHead className="min-w-[120px] text-[10px] uppercase font-black sticky left-[300px] z-20 bg-muted/90 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r">Reg No</TableHead>
+                      {STUDENT_COLUMNS.filter(col => col.key !== 'first_name' && col.key !== 'last_name' && col.key !== 'reg_no').map((col) => (
+                        <TableHead key={col.key} className="min-w-[140px] text-[10px] uppercase font-black whitespace-nowrap px-4 border-r border-border/40">
+                          {col.label}
+                        </TableHead>
+                      ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredStudents.map((student) => (
                       <TableRow key={student.id} className="hover:bg-primary/5 transition-colors border-b last:border-0 text-xs text-muted-foreground">
-                        <TableCell className="font-bold py-2 text-primary">
-                          {student.first_name} {student.last_name}
-                        </TableCell>
-                        <TableCell className="font-medium">{student.departments?.name}</TableCell>
-                        <TableCell className="font-mono text-[10px]">{student.reg_no}</TableCell>
-                        <TableCell>{student.batches || "-"}</TableCell>
-                        <TableCell className="font-black text-center text-foreground">{student.current_cgpa || "0"}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={parseInt(student.current_backlogs || "0") > 0 ? "destructive" : "secondary"} className="text-[9px] px-1.5 h-4">
-                            {student.current_backlogs || "0"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">{student.history_of_arrears_count || "0"}</TableCell>
-                        <TableCell className="text-center font-medium">{student.tenth_mark || "-"}</TableCell>
-                        <TableCell className="text-center font-medium">{student.twelfth_mark || "-"}</TableCell>
-                        <TableCell className="max-w-[120px] truncate" title={student.skills}>{student.skills || "-"}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={student.approval_status === 'approved_by_tpo' ? 'default' : 'secondary'}
-                            className={`text-[9px] font-bold px-1.5 h-4 ${student.approval_status === 'approved_by_tpo' ? 'bg-green-600' : ''}`}
-                          >
-                            {student.approval_status === 'approved_by_tpo' ? 'VERIFIED' : 'PENDING'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right pr-2 py-1">
+                        <TableCell className="py-1 px-2 text-center sticky left-0 z-10 bg-background/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            className="h-7 px-2"
+                            className="h-7 w-7 p-0 text-primary hover:bg-primary/20 hover:text-primary transition-all rounded-full"
                             onClick={() => {
                               setSelectedStudent(student);
                               setIsDetailsOpen(true);
                             }}
                           >
-                            <Eye className="h-4 w-4 mr-1" /> View
+                            <Eye className="h-4 w-4" />
                           </Button>
                         </TableCell>
+                        <TableCell className="sticky left-[70px] z-10 bg-background/95 backdrop-blur whitespace-nowrap">
+                          <Badge 
+                            variant={student.approval_status === 'approved_by_tpo' ? 'default' : 'secondary'}
+                            className={`text-[9px] font-bold px-1.5 h-4 ${student.approval_status === 'approved_by_tpo' ? 'bg-green-600' : 'bg-orange-100 text-orange-700'}`}
+                          >
+                            {student.approval_status === 'approved_by_tpo' ? 'VERIFIED' : 'PENDING'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-bold py-2 sticky left-[150px] z-10 bg-background/95 backdrop-blur whitespace-nowrap text-primary">
+                          {student.first_name} {student.last_name}
+                        </TableCell>
+                        <TableCell className="font-mono text-[10px] sticky left-[300px] z-10 bg-background/95 backdrop-blur border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap">
+                          {student.reg_no}
+                        </TableCell>
+
+                        {STUDENT_COLUMNS.filter(col => col.key !== 'first_name' && col.key !== 'last_name' && col.key !== 'reg_no').map((col) => (
+                          <TableCell key={col.key} className="whitespace-nowrap px-4 truncate max-w-[200px] border-r border-border/20 text-muted-foreground font-medium" title={String(student[col.key] || "-")}>
+                            {student[col.key] || "-"}
+                          </TableCell>
+                        ))}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -215,15 +209,16 @@ export default function StudentsMaster() {
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6 border-t">
-                  <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>Close</Button>
+                  <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>Close Window</Button>
                   {selectedStudent.approval_status === "approved_by_hod" && (
                     <Button 
                       variant="default" 
-                      className="bg-green-600 hover:bg-green-700 shadow-md" 
+                      className="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 font-bold group" 
                       onClick={() => handleFinalApprove(selectedStudent.id)}
                       disabled={isProcessing}
                     >
-                      <CheckCircle className="h-4 w-4 mr-2" /> Verify & Finalize Record
+                      {isProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PartyPopper className="h-5 w-5 mr-2 group-hover:rotate-12 group-hover:scale-110 transition-all text-yellow-300" />}
+                      FINAL VERIFY & PUBLISH PROFILE!
                     </Button>
                   )}
                 </div>

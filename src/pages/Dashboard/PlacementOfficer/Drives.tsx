@@ -54,7 +54,20 @@ import {
   MapPin,
   Briefcase,
   Loader2,
-  Sparkles
+  Sparkles,
+  Linkedin,
+  Globe,
+  ExternalLink,
+  Clock,
+  DollarSign,
+  GraduationCap,
+  ClipboardList,
+  Target,
+  History,
+  Award,
+  CheckSquare,
+  Info,
+  Layers
 } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -85,6 +98,9 @@ interface PlacementDrive {
   min_10th_mark: number;
   min_12th_mark: number;
   application_deadline: string | null;
+  company_website: string | null;
+  company_linkedin: string | null;
+  other_links: string | null;
 }
 
 interface Company {
@@ -135,6 +151,9 @@ export default function Drives() {
       min_10th_mark: 0,
       min_12th_mark: 0,
       application_deadline: "",
+      company_website: "",
+      company_linkedin: "",
+      other_links: "",
     },
   });
 
@@ -270,6 +289,8 @@ export default function Drives() {
 
         const driveData = {
           ...rest,
+          // Normalize to Rupees if input was LPA, otherwise keep as is
+          ctc_amount: rest.ctc_amount && rest.ctc_amount < 100 ? rest.ctc_amount * 100000 : rest.ctc_amount,
           company_id,
           academic_year_id
         };
@@ -375,6 +396,9 @@ export default function Drives() {
       min_10th_mark: drive.min_10th_mark || 0,
       min_12th_mark: drive.min_12th_mark || 0,
       application_deadline: drive.application_deadline ? new Date(drive.application_deadline).toISOString().split('T')[0] : "",
+      company_website: drive.company_website || "",
+      company_linkedin: drive.company_linkedin || "",
+      other_links: drive.other_links || "",
     });
     setIsDialogOpen(true);
   };
@@ -444,7 +468,7 @@ export default function Drives() {
       visit_time: "09:30 AM",
       visit_mode: "on_campus",
       stipend_amount: 50000,
-      ctc_amount: 24,
+      ctc_amount: 24, // Store as LPA, mutation will normalize
       remarks: "Testing drive - please ignore",
       eligible_departments: demoDepts,
       job_description: "We are looking for passionate engineers to join our cloud team.",
@@ -457,6 +481,9 @@ export default function Drives() {
       min_10th_mark: 85,
       min_12th_mark: 85,
       application_deadline: deadline,
+      company_website: "https://www.google.com",
+      company_linkedin: "https://www.linkedin.com/company/google",
+      other_links: "https://careers.google.com",
     });
     toast.success("Magic Fill complete! 📝✨");
   };
@@ -563,18 +590,21 @@ export default function Drives() {
                   Schedule Drive
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editingDrive ? "Edit Drive" : "Schedule New Drive"}</DialogTitle>
-                  <DialogDescription>
-                    {editingDrive
-                      ? "Update the drive details below"
-                      : "Fill in the details to schedule a new placement drive"}
-                  </DialogDescription>
-                </DialogHeader>
+              <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto p-0 border-none shadow-2xl">
+                <div className="bg-primary/10 px-6 py-4 border-b border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-primary">
+                      <Sparkles className="h-6 w-6" />
+                      {editingDrive ? "Edit Drive Details" : "Schedule New Placement Drive"}
+                    </DialogTitle>
+                    <DialogDescription className="text-muted-foreground font-medium">
+                      Configure comprehensive drive details for better visibility and student targeting.
+                    </DialogDescription>
+                  </DialogHeader>
+                </div>
                 <form 
                   onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} 
-                  className="space-y-6"
+                  className="p-6 space-y-6"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && e.ctrlKey) {
                       form.handleSubmit((data) => saveMutation.mutate(data))();
@@ -582,144 +612,252 @@ export default function Drives() {
                   }}
                 >
                   <Tabs defaultValue="basic" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                      <TabsTrigger value="job">Job Details</TabsTrigger>
-                      <TabsTrigger value="eligibility">Eligibility</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/50 p-1 rounded-xl mb-6">
+                      <TabsTrigger value="basic" className="rounded-lg gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                        <Building2 className="h-4 w-4" />
+                        Basic Info
+                      </TabsTrigger>
+                      <TabsTrigger value="job" className="rounded-lg gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                        <Briefcase className="h-4 w-4" />
+                        Job Details
+                      </TabsTrigger>
+                      <TabsTrigger value="eligibility" className="rounded-lg gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                        <Target className="h-4 w-4" />
+                        Eligibility
+                      </TabsTrigger>
                     </TabsList>
                     
-                    <TabsContent value="basic" className="space-y-4 pt-4">
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        {/* Company Selection */}
-                        <div className="space-y-2">
-                          <Label>Company Name *</Label>
-                          <Input {...form.register("company_name")} placeholder="e.g., Google, Microsoft" />
+                    <TabsContent value="basic" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-8 w-1 bg-primary rounded-full" />
+                          <h3 className="font-bold text-primary flex items-center gap-2">
+                            <Layers className="h-4 w-4" />
+                            Primary Identification
+                          </h3>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {/* Company Selection */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold">Company Name *</Label>
+                            <Input {...form.register("company_name")} placeholder="e.g., Google India, Microsoft" className="bg-white border-primary/20 focus-visible:ring-primary shadow-sm" />
+                          </div>
+
+                          {/* Role Offered */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold">Job Role Offered *</Label>
+                            <Input {...form.register("role_offered")} placeholder="e.g., Software Development Engineer" className="bg-white border-primary/20" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-6 sm:grid-cols-2">
+                        <div className="bg-muted/30 p-4 rounded-xl border space-y-4">
+                           <h3 className="font-bold flex items-center gap-2 text-foreground/80">
+                            <CalendarDays className="h-4 w-4" />
+                            Drive Logistics
+                          </h3>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold">Drive Type *</Label>
+                            <Controller
+                              name="drive_type"
+                              control={form.control}
+                              render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <SelectTrigger className="bg-white">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="placement">Placement Drive</SelectItem>
+                                    <SelectItem value="internship">Internship Drive</SelectItem>
+                                    <SelectItem value="both">Both (Placement + Intern)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold">Visit Mode *</Label>
+                            <Controller
+                              name="visit_mode"
+                              control={form.control}
+                              render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <SelectTrigger className="bg-white">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="on_campus">Physical (On Campus)</SelectItem>
+                                    <SelectItem value="off_campus">External (Off Campus)</SelectItem>
+                                    <SelectItem value="virtual">Remote (Virtual)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
+                          </div>
                         </div>
 
-                        {/* Drive Type */}
-                        <div className="space-y-2">
-                          <Label>Drive Type *</Label>
-                          <Controller
-                            name="drive_type"
-                            control={form.control}
-                            render={({ field }) => (
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="placement">Placement</SelectItem>
-                                  <SelectItem value="internship">Internship</SelectItem>
-                                  <SelectItem value="both">Both</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
-                        </div>
-
-                        {/* Visit Mode */}
-                        <div className="space-y-2">
-                          <Label>Visit Mode *</Label>
-                          <Controller
-                            name="visit_mode"
-                            control={form.control}
-                            render={({ field }) => (
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="on_campus">On Campus</SelectItem>
-                                  <SelectItem value="off_campus">Off Campus</SelectItem>
-                                  <SelectItem value="virtual">Virtual</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
-                        </div>
-
-                        {/* Role Offered */}
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label>Role Offered *</Label>
-                          <Input {...form.register("role_offered")} placeholder="e.g., Software Engineer" />
-                        </div>
-
-                        {/* Visit Date & Time */}
-                        <div className="space-y-2">
-                          <Label>Drive Date *</Label>
-                          <Input type="date" {...form.register("visit_date")} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Application Deadline</Label>
-                          <Input type="date" {...form.register("application_deadline")} />
+                        <div className="bg-muted/30 p-4 rounded-xl border space-y-4">
+                           <h3 className="font-bold flex items-center gap-2 text-foreground/80">
+                            <Clock className="h-4 w-4" />
+                            Deadlines & Slots
+                          </h3>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold flex items-center justify-between">
+                              <span>Drive Date *</span>
+                              <Badge variant="outline" className="text-[10px] uppercase font-bold">Slot</Badge>
+                            </Label>
+                            <Input type="date" {...form.register("visit_date")} className="bg-white" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold flex items-center justify-between">
+                              <span>App. Deadline</span>
+                              <Badge variant="secondary" className="text-[10px] uppercase font-semibold h-4">Optional</Badge>
+                            </Label>
+                            <Input type="date" {...form.register("application_deadline")} className="bg-white" placeholder="Leave empty if no deadline" />
+                            <p className="text-[10px] text-muted-foreground italic">Leave empty for "Open Application"</p>
+                          </div>
                         </div>
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="job" className="space-y-4 pt-4">
-                      <div className="grid gap-4 sm:grid-cols-2">
+                    <TabsContent value="job" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <div className="grid gap-6 sm:grid-cols-2">
+                        <div className="bg-green-50/50 p-4 rounded-xl border border-green-100 space-y-4">
+                          <h3 className="font-bold text-green-700 flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            Compensation Details
+                          </h3>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-green-800">CTC (₹ LPA) - Placement</Label>
+                            <Input type="number" step="0.1" {...form.register("ctc_amount", { valueAsNumber: true })} placeholder="12.5" className="bg-white focus-visible:ring-green-500" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-green-800">Stipend (₹/mo) - Internship</Label>
+                            <Input type="number" {...form.register("stipend_amount", { valueAsNumber: true })} placeholder="25000" className="bg-white focus-visible:ring-green-500" />
+                          </div>
+                        </div>
+
+                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4">
+                          <h3 className="font-bold text-blue-700 flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            Work Location
+                          </h3>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-blue-800">Base Location</Label>
+                            <Input {...form.register("work_location")} placeholder="e.g., Bangalore, Hyderabad, Remote" className="bg-white focus-visible:ring-blue-500" />
+                          </div>
+                          <div className="space-y-4">
+                            <Label className="text-sm font-semibold text-blue-800">Bond / Service Agreement</Label>
+                            <Input {...form.register("bond_details")} placeholder="e.g., 2 Years / No Bond" className="bg-white focus-visible:ring-blue-500" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label>CTC (₹ LPA)</Label>
-                          <Input type="number" step="0.1" {...form.register("ctc_amount", { valueAsNumber: true })} placeholder="12.5" />
+                          <Label className="font-bold flex items-center gap-2">
+                            <ClipboardList className="h-4 w-4 text-primary" />
+                            Detailed Job Description
+                          </Label>
+                          <Textarea {...form.register("job_description")} className="min-h-[120px] bg-white border-primary/10 shadow-inner" placeholder="Detailed roles, responsibilities, and specific requirements..." />
                         </div>
                         <div className="space-y-2">
-                          <Label>Work Location</Label>
-                          <Input {...form.register("work_location")} placeholder="e.g., Bangalore, Remote" />
+                          <Label className="font-bold flex items-center gap-2 whitespace-nowrap">
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                            Additional Instructions for Students
+                          </Label>
+                          <Textarea {...form.register("remarks")} placeholder="Notes about rounds, dress code, platform details..." className="bg-white" />
                         </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label>Job Description</Label>
-                          <Textarea {...form.register("job_description")} className="min-h-[100px]" placeholder="Paste job description here..." />
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label>Bond Details (if any)</Label>
-                          <Input {...form.register("bond_details")} placeholder="e.g., 2 years / No bond" />
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label>Additional Remarks</Label>
-                          <Textarea {...form.register("remarks")} placeholder="Notes for HOD/Students" />
+                      </div>
+
+                      <div className="bg-muted/10 p-5 rounded-xl border border-dashed space-y-4">
+                        <h3 className="text-sm font-bold flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          External Digital Links
+                        </h3>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                              <Globe className="h-3 w-3" />
+                              Website
+                            </Label>
+                            <Input {...form.register("company_website")} placeholder="https://example.com" className="bg-white" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                              <Linkedin className="h-3 w-3" />
+                              LinkedIn
+                            </Label>
+                            <Input {...form.register("company_linkedin")} placeholder="https://linkedin.com/company/..." className="bg-white" />
+                          </div>
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Other / Registration Links</Label>
+                            <Input {...form.register("other_links")} placeholder="Registration portral, Drive brochure PDF link, etc." className="bg-white" />
+                          </div>
                         </div>
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="eligibility" className="space-y-4 pt-4">
-                      <div className="grid gap-4 sm:grid-cols-3">
-                         <div className="space-y-2">
-                          <Label>Min CGPA</Label>
-                          <Input type="number" step="0.01" {...form.register("min_cgpa", { valueAsNumber: true })} />
+                    <TabsContent value="eligibility" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <div className="grid gap-6 sm:grid-cols-3">
+                         <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 space-y-2">
+                          <Label className="text-xs font-bold text-orange-800 flex items-center gap-1.5 uppercase">
+                            <GraduationCap className="h-3.5 w-3.5" />
+                            Minimum CGPA
+                          </Label>
+                          <Input type="number" step="0.01" {...form.register("min_cgpa", { valueAsNumber: true })} className="bg-white focus-visible:ring-orange-500 font-bold" />
                         </div>
-                        <div className="space-y-2">
-                          <Label>Max Backlogs</Label>
-                          <Input type="number" {...form.register("max_backlogs", { valueAsNumber: true })} />
+                        <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 space-y-2">
+                          <Label className="text-xs font-bold text-orange-800 flex items-center gap-1.5 uppercase">
+                            <History className="h-3.5 w-3.5" />
+                            Max Backlogs
+                          </Label>
+                          <Input type="number" {...form.register("max_backlogs", { valueAsNumber: true })} className="bg-white focus-visible:ring-orange-500 font-bold" />
                         </div>
-                        <div className="space-y-2">
-                          <Label>Max History Arrears</Label>
-                          <Input type="number" {...form.register("max_history_arrears", { valueAsNumber: true })} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Min 10th %</Label>
-                          <Input type="number" step="0.1" {...form.register("min_10th_mark", { valueAsNumber: true })} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Min 12th %</Label>
-                          <Input type="number" step="0.1" {...form.register("min_12th_mark", { valueAsNumber: true })} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Eligible Batches</Label>
-                          <Input {...form.register("eligible_batches")} placeholder="2021-2025" />
+                        <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 space-y-2">
+                          <Label className="text-xs font-bold text-orange-800 flex items-center gap-1.5 uppercase">
+                            <Award className="h-3.5 w-3.5" />
+                            Max History
+                          </Label>
+                          <Input type="number" {...form.register("max_history_arrears", { valueAsNumber: true })} className="bg-white focus-visible:ring-orange-500 font-bold" />
                         </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <Label>Eligible Departments *</Label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <div className="grid gap-4 sm:grid-cols-3 bg-muted/20 p-4 rounded-xl border">
+                        <div className="space-y-2">
+                          <Label className="text-[11px] font-bold uppercase text-muted-foreground">Min 10th %</Label>
+                          <Input type="number" step="0.1" {...form.register("min_10th_mark", { valueAsNumber: true })} className="bg-white h-8" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[11px] font-bold uppercase text-muted-foreground">Min 12th %</Label>
+                          <Input type="number" step="0.1" {...form.register("min_12th_mark", { valueAsNumber: true })} className="bg-white h-8" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[11px] font-bold uppercase text-muted-foreground">Eligible Batches</Label>
+                          <Input {...form.register("eligible_batches")} placeholder="2021-2025" className="bg-white h-8" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                           <Label className="font-bold flex items-center gap-2">
+                            <CheckSquare className="h-4 w-4 text-primary" />
+                            Target Departments
+                          </Label>
+                          <Badge variant="outline" className="text-muted-foreground font-normal">{selectedDepts.length} Selected</Badge>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {departments?.map((dept) => (
                             <label
                               key={dept.id}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-md border text-xs cursor-pointer hover:bg-muted/50 transition-colors ${selectedDepts.includes(dept.id) ? 'bg-primary/5 border-primary/30' : ''}`}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-semibold cursor-pointer transition-all ${selectedDepts.includes(dept.id) ? 'bg-primary/10 border-primary/50 text-primary shadow-sm hover:bg-primary/20' : 'bg-white hover:bg-muted/50'}`}
                             >
                               <Checkbox
                                 checked={selectedDepts.includes(dept.id)}
                                 onCheckedChange={() => handleDeptToggle(dept.id)}
+                                className="h-3 w-3 data-[state=checked]:bg-primary"
                               />
                               <span className="truncate">{dept.code}</span>
                             </label>
@@ -729,20 +867,20 @@ export default function Drives() {
                     </TabsContent>
                   </Tabs>
 
-                  <div className="flex justify-between items-center pt-4 border-t">
+                  <div className="flex justify-between items-center px-6 py-4 border-t bg-muted/20">
                     <div className="flex gap-2">
-                       <Button type="button" variant="ghost" onClick={fillDemoData} className="text-primary hover:text-primary hover:bg-primary/10">
+                       <Button type="button" variant="outline" onClick={fillDemoData} className="text-primary hover:text-primary hover:bg-primary/10 border-primary/20 rounded-lg">
                         <Sparkles className="mr-2 h-4 w-4" />
                         Magic Fill
                       </Button>
                     </div>
                     <div className="flex gap-3">
-                      <Button type="button" variant="outline" onClick={handleDialogClose}>
-                        Cancel
+                      <Button type="button" variant="ghost" onClick={handleDialogClose}>
+                        Discard
                       </Button>
-                      <Button type="submit" disabled={saveMutation.isPending} className="min-w-[120px]">
-                        {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        {editingDrive ? "Update Drive" : "Schedule Drive"}
+                      <Button type="submit" disabled={saveMutation.isPending} className="min-w-[150px] rounded-lg shadow-lg hover:shadow-xl transition-all shadow-primary/20">
+                        {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                        {editingDrive ? "Update Schedule" : "Confirm Schedule"}
                       </Button>
                     </div>
                   </div>
@@ -791,73 +929,112 @@ export default function Drives() {
                   </TableHeader>
                   <TableBody>
                     {drives.map((drive) => (
-                      <TableRow key={drive.id} className="table-row-hover">
+                      <TableRow key={drive.id} className="hover:bg-muted/30 transition-colors border-b last:border-0 group h-[80px]">
                         <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                              <Building2 className="h-5 w-5 text-primary" />
+                          <div className="flex items-center gap-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm group-hover:scale-110 transition-transform">
+                              <Building2 className="h-6 w-6" />
                             </div>
-                            <div>
-                              <p className="font-medium">{drive.companies?.name || "Unknown"}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {drive.academic_years?.year_label}
-                              </p>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-lg leading-none">{drive.companies?.name || "Unknown"}</p>
+                                {drive.company_website && (
+                                  <a href={drive.company_website} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors">
+                                    <Globe className="h-4 w-4" />
+                                  </a>
+                                )}
+                                {drive.company_linkedin && (
+                                  <a href={drive.company_linkedin} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-blue-600 transition-colors">
+                                    <Linkedin className="h-4 w-4" />
+                                  </a>
+                                )}
+                                {drive.other_links && (
+                                  <a href={drive.other_links} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-orange-500 transition-colors">
+                                    <ExternalLink className="h-4 w-4" />
+                                  </a>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground/80">
+                                <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-bold h-4">
+                                  {drive.academic_years?.year_label}
+                                </Badge>
+                                <span>Batch: {drive.eligible_batches || "2021-2025"}</span>
+                                {(!drive.application_deadline) && (
+                                  <Badge variant="outline" className="text-[9px] bg-green-50 text-green-700 border-green-200">Open App</Badge>
+                                )}
+                              </div>
                             </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1.5 items-start">
+                            {getDriveTypeBadge(drive.drive_type)}
+                            <div className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">
+                              <MapPin className="h-3 w-3" />
+                              {drive.visit_mode === 'on_campus' ? 'On Campus' : drive.visit_mode === 'off_campus' ? 'Off Campus' : 'Virtual'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-primary font-semibold">
+                              <Briefcase className="h-4 w-4" />
+                              <p>{drive.role_offered || "Multiple Roles"}</p>
+                            </div>
+                            <p className="text-xs text-muted-foreground/80 pl-6">{drive.work_location || "Location TBD"}</p>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
-                            {getDriveTypeBadge(drive.drive_type)}
-                            {getVisitModeBadge(drive.visit_mode)}
+                            <div className="flex items-center gap-2 font-bold text-slate-800">
+                              <CalendarDays className="h-4 w-4 text-primary/70" />
+                              <span>
+                                {new Date(drive.visit_date).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground pl-6">
+                              <Clock className="h-3.5 w-3.5" />
+                              <span>{drive.visit_time || "09:00 AM"}</span>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <p className="font-medium">{drive.role_offered || "Multiple Roles"}</p>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                            <span>
-                              {new Date(drive.visit_date).toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                            </span>
+                          <div className="space-y-1.5">
+                            {drive.ctc_amount && (
+                              <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg border border-green-100 dark:border-green-800/30 w-fit">
+                                <DollarSign className="h-3.5 w-3.5" />
+                                <p className="font-bold text-sm">
+                                  ₹{drive.ctc_amount >= 1000 ? (drive.ctc_amount / 100000).toFixed(1) : drive.ctc_amount} LPA
+                                </p>
+                              </div>
+                            )}
+                            {!drive.ctc_amount && (
+                              <Badge variant="outline" className="text-muted-foreground whitespace-nowrap text-[10px]">TBD / Internship</Badge>
+                            )}
                           </div>
-                          {drive.visit_time && (
-                            <p className="text-sm text-muted-foreground mt-1">{drive.visit_time}</p>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {drive.ctc_amount && (
-                            <p className="font-medium">₹{(drive.ctc_amount / 100000).toFixed(1)} LPA</p>
-                          )}
-                          {drive.stipend_amount && (
-                            <p className="text-sm text-muted-foreground">
-                              ₹{drive.stipend_amount.toLocaleString()}/mo
-                            </p>
-                          )}
-                          {!drive.ctc_amount && !drive.stipend_amount && <span className="text-muted-foreground">—</span>}
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
+                              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 text-primary">
+                                <MoreHorizontal className="h-5 w-5" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEdit(drive)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
+                            <DropdownMenuContent align="end" className="w-[160px]">
+                              <DropdownMenuItem onClick={() => handleEdit(drive)} className="cursor-pointer">
+                                <Pencil className="mr-3 h-4 w-4" />
+                                Edit Drive
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="text-destructive"
+                                className="text-destructive cursor-pointer hover:bg-destructive/10"
                                 onClick={() => handleDelete(drive.id)}
                               >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
+                                <Trash2 className="mr-3 h-4 w-4" />
+                                Delete Drive
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

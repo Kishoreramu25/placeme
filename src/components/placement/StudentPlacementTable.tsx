@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,10 +38,14 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, Plus, Search, FileDown, Columns, Upload, Clipboard, Eye, EyeOff, X, Loader2, CheckCircle2 } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, FileDown, Columns, Upload, Clipboard, Eye, EyeOff, X, Loader2, CheckCircle2, Filter, ArrowUpDown, ArrowUp, Save, RefreshCw, Calculator, Building, GraduationCap, DollarSign, CheckSquare, Square } from "lucide-react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import * as XLSX from "xlsx";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 type StudentPlacement = {
     id: string;
@@ -74,8 +78,56 @@ export function StudentPlacementTable() {
     const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
     const [newColumnName, setNewColumnName] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [filters, setFilters] = useState<Record<string, string>>({});
-    const [globalSearch, setGlobalSearch] = useState("");
+
+    // Data Fetching - Moved to top to avoid TDZ errors
+    const { data: placementsData, isLoading } = useQuery({
+        queryKey: ["student-placements"],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from("student_placements" as any)
+                .select("*")
+                .order("created_at", { ascending: false });
+
+            if (error) throw error;
+            return (data as any) as StudentPlacement[];
+        },
+    });
+    const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("sp_searchTerm") || "");
+    const [hideEmpty, setHideEmpty] = useState(() => localStorage.getItem("sp_hideEmpty") === "true");
+
+    interface FilterCriterion {
+        id: string;
+        field: keyof StudentPlacement;
+        label: string;
+        value: string;
+    }
+
+    const [activeFilters, setActiveFilters] = useState<FilterCriterion[]>(() => {
+        const saved = localStorage.getItem("sp_activeFilters");
+        return saved ? JSON.parse(saved) : [];
+    });
+    const [isAddingFilter, setIsAddingFilter] = useState(false);
+    const [newFilterField, setNewFilterField] = useState<string>("");
+    const [newFilterValue, setNewFilterValue] = useState<string>("");
+    const [filterValueSearch, setFilterValueSearch] = useState("");
+
+    useEffect(() => {
+        setFilterValueSearch("");
+    }, [newFilterField]);
+
+    type SortOption = "date-desc" | "date-asc" | "student-asc" | "student-desc" | "company-asc" | "company-desc";
+    const [sortBy, setSortBy] = useState<SortOption>(() => (localStorage.getItem("sp_sortBy") as SortOption) || "date-desc");
+
+    // Persist State Config
+    useEffect(() => {
+        localStorage.setItem("sp_searchTerm", searchTerm);
+        localStorage.setItem("sp_hideEmpty", String(hideEmpty));
+        localStorage.setItem("sp_sortBy", sortBy);
+        localStorage.setItem("sp_activeFilters", JSON.stringify(activeFilters));
+    }, [searchTerm, hideEmpty, sortBy, activeFilters]);
+
+    // Bulk Select State
+    const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
 
     // === Excel-like State ===
     type CellPos = { row: number; col: number };
@@ -86,24 +138,74 @@ export function StudentPlacementTable() {
     const [isDragging, setIsDragging] = useState(false);
     const [dragEnd, setDragEnd] = useState<CellPos | null>(null);
     const tableRef = useRef<HTMLDivElement>(null);
+    const topScrollRef = useRef<HTMLDivElement>(null);
     const editInputRef = useRef<HTMLInputElement>(null);
+    const [showScrollTop, setShowScrollTop] = useState(false);
+    const [tableScrollWidth, setTableScrollWidth] = useState(2000);
+
+    // Sync Horizontal Scrolls, detects table width, & Scroll to Top Detection
+    useEffect(() => {
+        const table = tableRef.current;
+        const topScroll = topScrollRef.current;
+        if (!table || !topScroll) return;
+
+        // Sync table width to the top scrollbar's inner spacer
+        const updateWidth = () => {
+            if (table) setTableScrollWidth(table.scrollWidth);
+        };
+        
+        // Initial width set
+        updateWidth();
+
+        const handleTableScroll = () => {
+            if (topScroll.scrollLeft !== table.scrollLeft) {
+                topScroll.scrollLeft = table.scrollLeft;
+            }
+            if (table.scrollTop > 300) setShowScrollTop(true);
+            else setShowScrollTop(false);
+        };
+        const handleTopScroll = () => {
+            if (table.scrollLeft !== topScroll.scrollLeft) {
+                table.scrollLeft = topScroll.scrollLeft;
+            }
+        };
+
+        table.addEventListener('scroll', handleTableScroll);
+        topScroll.addEventListener('scroll', handleTopScroll);
+        
+        // Use ResizeObserver for dynamic column count changes
+        const observer = new ResizeObserver(updateWidth);
+        observer.observe(table);
+
+        return () => {
+            table.removeEventListener('scroll', handleTableScroll);
+            topScroll.removeEventListener('scroll', handleTopScroll);
+            observer.disconnect();
+        };
+    }, []);
+
+    const scrollToTop = () => {
+        if (tableRef.current) {
+            tableRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
 
     // Column Definitions State with LocalStorage Persistence
     const [columnDefs, setColumnDefs] = useState<any[]>(() => {
         const saved = localStorage.getItem("placement_column_defs");
         const defaultCols = [
+            { key: "student_name", label: "Student Name", visible: true, isCustom: false },
+            { key: "department", label: "Dept", visible: true, isCustom: false },
+            { key: "student_mail", label: "Student Mail", visible: true, isCustom: false },
+            { key: "student_id", label: "Student ID", visible: true, isCustom: false },
             { key: "company_name", label: "Company Name", visible: true, isCustom: false },
+            { key: "offer_type", label: "Type", visible: true, isCustom: false },
+            { key: "salary", label: "Salary", visible: true, isCustom: false },
+            { key: "package_lpa", label: "Package (LPA)", visible: true, isCustom: false },
             { key: "company_mail", label: "Company Mail", visible: true, isCustom: false },
             { key: "company_address", label: "Company Address", visible: true, isCustom: false },
             { key: "hr_name", label: "HR Name", visible: true, isCustom: false },
             { key: "hr_mail", label: "HR Mail", visible: true, isCustom: false },
-            { key: "student_name", label: "Student Name", visible: true, isCustom: false },
-            { key: "department", label: "Dept", visible: true, isCustom: false },
-            { key: "offer_type", label: "Type", visible: true, isCustom: false },
-            { key: "salary", label: "Salary", visible: true, isCustom: false },
-            { key: "package_lpa", label: "Package (LPA)", visible: true, isCustom: false },
-            { key: "student_id", label: "Student ID", visible: true, isCustom: false },
-            { key: "student_mail", label: "Student Mail", visible: true, isCustom: false },
             { key: "student_mobile", label: "Student Mobile", visible: true, isCustom: false },
             { key: "student_address", label: "Student Address", visible: true, isCustom: false },
             { key: "current_year", label: "Year", visible: true, isCustom: false },
@@ -112,15 +214,24 @@ export function StudentPlacementTable() {
             { key: "ref_no", label: "Ref", visible: true, isCustom: false },
         ];
         if (saved) {
-            const parsed = JSON.parse(saved);
-            // Merge defaults in case new columns were added to code but not in local storage
-            const merged = defaultCols.map(def => {
-                const found = parsed.find((p: any) => p.key === def.key);
-                return found ? { ...def, ...found } : def;
-            });
-            // Add any custom columns from storage
-            const custom = parsed.filter((p: any) => p.isCustom);
-            return [...merged, ...custom];
+            try {
+                const parsed = JSON.parse(saved);
+                // Create map of new professional order
+                const orderMap = defaultCols.reduce((acc: any, col, idx) => { acc[col.key] = idx; return acc; }, {});
+                
+                // Merge states (visibility etc) but enforce the new professional order
+                const baseCols = defaultCols.map(def => {
+                    const found = parsed.find((p: any) => p.key === def.key);
+                    return found ? { ...def, ...found } : def;
+                });
+
+                // Add any custom columns that were created by user
+                const custom = parsed.filter((p: any) => p.isCustom && !orderMap[p.key]);
+                
+                return [...baseCols, ...custom];
+            } catch (e) {
+                return defaultCols;
+            }
         }
         return defaultCols;
     });
@@ -158,19 +269,7 @@ export function StudentPlacementTable() {
         }
     };
 
-    // Data Fetching
-    const { data: placements, isLoading } = useQuery({
-        queryKey: ["student-placements"],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from("student_placements" as any)
-                .select("*")
-                .order("created_at", { ascending: false });
-
-            if (error) throw error;
-            return (data as any) as StudentPlacement[];
-        },
-    });
+    // Delete Mutation
 
     // Delete Mutation
     const deleteMutation = useMutation({
@@ -425,11 +524,44 @@ export function StudentPlacementTable() {
         toast.success(`Downloaded ${filteredData.length} records.`);
     };
 
+
+
+    const getAvailableValues = (fieldKey: string) => {
+        if (!placementsData) return [];
+        const vals = new Set(placementsData.map(p => {
+            const col = columnDefs.find(c => c.key === fieldKey);
+            return col?.isCustom ? (p.other_details?.[fieldKey]) : (p as any)[fieldKey];
+        }).filter(Boolean));
+        return Array.from(vals).sort();
+    };
+
+    const handleAddFilter = () => {
+        if (!newFilterField || !newFilterValue) return;
+        const fieldConfig = columnDefs.find(f => f.key === newFilterField);
+        if (!fieldConfig) return;
+
+        const newFilter: FilterCriterion = {
+            id: Math.random().toString(36).substr(2, 9),
+            field: newFilterField as keyof StudentPlacement,
+            label: fieldConfig.label,
+            value: newFilterValue
+        };
+
+        setActiveFilters([...activeFilters, newFilter]);
+        setIsAddingFilter(false);
+        setNewFilterField("");
+        setNewFilterValue("");
+    };
+
+    const removeFilter = (id: string) => {
+        setActiveFilters(activeFilters.filter(f => f.id !== id));
+    };
+
     // Filter & Search Logic
-    const filteredData = placements?.filter((p: any) => {
+    const filteredData = placementsData?.filter((p: any) => {
         // Global Search
-        if (globalSearch) {
-            const searchLower = globalSearch.toLowerCase();
+        if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
             const matchesGlobal = columnDefs.some(col => {
                 if (!col.visible) return false;
                 const val = col.isCustom ? (p.other_details?.[col.key]) : p[col.key];
@@ -439,17 +571,96 @@ export function StudentPlacementTable() {
         }
 
         // Specific Filters
-        return Object.entries(filters).every(([key, value]) => {
-            if (!value) return true;
-            const valLower = value.toLowerCase();
-            const col = columnDefs.find(c => c.key === key);
-            if (!col) return true;
-            const recordVal = col.isCustom ? (p.other_details?.[key]) : p[key];
-            return String(recordVal || "").toLowerCase().includes(valLower);
-        });
+        for (const filter of activeFilters) {
+            const col = columnDefs.find(c => c.key === filter.field);
+            const recordVal = col?.isCustom ? (p.other_details?.[filter.field]) : p[filter.field];
+            if (String(recordVal || "").toLowerCase() !== filter.value.toLowerCase()) {
+                return false;
+            }
+        }
+        return true;
+    }).sort((a, b) => {
+        if (sortBy === "company-asc") return String(a.company_name || "").localeCompare(String(b.company_name || ""));
+        if (sortBy === "company-desc") return String(b.company_name || "").localeCompare(String(a.company_name || ""));
+        if (sortBy === "student-asc") return String(a.student_name || "").localeCompare(String(b.student_name || ""));
+        if (sortBy === "student-desc") return String(b.student_name || "").localeCompare(String(a.student_name || ""));
+        if (sortBy === "date-asc") return new Date(a.join_date || 0).getTime() - new Date(b.join_date || 0).getTime();
+        if (sortBy === "date-desc") return new Date(b.join_date || 0).getTime() - new Date(a.join_date || 0).getTime();
+        return 0;
     });
 
     const visibleColumns = columnDefs.filter(c => c.visible);
+
+    const rowsToShow = hideEmpty 
+        ? filteredData?.filter(r => {
+            return visibleColumns.every(col => {
+                const val = col.isCustom ? (r.other_details?.[col.key]) : (r as any)[col.key];
+                return val !== null && val !== undefined && val !== "";
+            });
+        }) 
+        : filteredData;
+
+
+
+    const handleSelectAll = useCallback(() => {
+        if (!rowsToShow) return;
+        if (selectedRowIds.size === rowsToShow.length) {
+            setSelectedRowIds(new Set());
+        } else {
+            setSelectedRowIds(new Set(rowsToShow.map((r: any, idx: number) => r.id || `temp-${idx}`)));
+        }
+    }, [rowsToShow, selectedRowIds]);
+
+    const handleSelectRow = useCallback((id: string) => {
+        setSelectedRowIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }, []);
+    const handleBulkDelete = () => {
+        if (selectedRowIds.size === 0) return;
+        if (confirm(`Are you sure you want to completely delete ${selectedRowIds.size} student records?`)) {
+            const idsToDelete = Array.from(selectedRowIds);
+            
+            // Sync with backend natively only for real UUIDs
+            const dbIds = idsToDelete.filter(id => !id.startsWith("temp-"));
+            if (dbIds.length > 0) {
+                dbIds.forEach(id => {
+                    (supabase.from("student_placements" as any) as any).delete().eq("id", id).then();
+                });
+            }
+            queryClient.invalidateQueries({ queryKey: ["student-placements"] });
+            
+            // Clean local uncommitted state
+            const newEdits = { ...localEdits };
+            idsToDelete.forEach(id => delete newEdits[id]);
+            setLocalEdits(newEdits);
+            
+            setSelectedRowIds(new Set());
+            toast.success("Batch deleted successfully!");
+        }
+    };
+
+    const handleBulkExport = () => {
+        if (selectedRowIds.size === 0) return;
+        const selectedData = rowsToShow.filter((r, idx) => selectedRowIds.has(r.id || `temp-${idx}`));
+        const wb = XLSX.utils.book_new();
+        const exportData = selectedData.map((r, i) => {
+            const data: any = { "S.No": i + 1 };
+            visibleColumns.forEach(col => {
+                const val = col.isCustom ? (r.other_details?.[col.key]) : (r as any)[col.key];
+                data[col.label] = val || "";
+            });
+            return data;
+        });
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        XLSX.utils.book_append_sheet(wb, ws, "Selected Data");
+        XLSX.writeFile(wb, `Student_Placements_Selected.xlsx`);
+        toast.success(`Exported ${selectedData.length} records.`);
+        setSelectedRowIds(new Set());
+    };
 
     // === Excel-like Helpers ===
     const getSelectionRange = useCallback(() => {
@@ -699,30 +910,76 @@ export function StudentPlacementTable() {
         }
     }, [isDragging]);
 
+    const handlePasteFromClipboard = () => {
+        navigator.clipboard.readText().then(text => {
+            toast.info("Select a cell and press Ctrl+V to securely paste from clipboard");
+        }).catch(() => toast.error('Clipboard access denied'));
+    };
+
+    const handlePasteAsNewColumn = () => {
+        setIsColumnDialogOpen(true);
+    };
+
+    const fetchRecords = () => {
+        queryClient.invalidateQueries({ queryKey: ["student-placements"] });
+        toast.success("Syncing database...");
+    };
+
     return (
-        <div className="space-y-4">
-            <div className="flex flex-col gap-4">
-                <div className="flex justify-between items-center gap-4 flex-wrap">
-                    <h2 className="text-2xl font-bold">Student Placement Records</h2>
-                    <div className="flex gap-2">
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept=".xlsx,.csv"
-                            onChange={handleFileUpload}
-                        />
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                            <Upload className="mr-2 h-4 w-4" /> Import Excel/CSV
-                        </Button>
-                        <Button variant="secondary" onClick={handleDownload} className="shadow-sm">
-                            <FileDown className="mr-2 h-4 w-4" /> Export Excel
-                        </Button>
-                        <Button variant="outline" onClick={() => setIsColumnDialogOpen(true)}>
-                            <Columns className="mr-2 h-4 w-4" /> Add Col
-                        </Button>
+        <Card className="w-full border-0 shadow-premium overflow-hidden bg-background">
+            <CardHeader className="space-y-6 pb-6 bg-muted/5 border-b px-4 md:px-6 pt-6">
+                <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
+                    <div>
+                        <CardTitle className="text-2xl font-black flex items-center gap-3 tracking-tight text-primary">
+                            Student Placement Records
+                            {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+                        </CardTitle>
+                        <CardDescription className="text-sm font-medium mt-1">
+                            Centralized placement data history and management
+                        </CardDescription>
+                    </div>
+
+                    {/* Peak Professional Action Bar */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-1 mr-2 border-r pr-4 border-border/50">
+                            <Button onClick={fetchRecords} variant="ghost" size="icon" className="h-9 w-9 hover:bg-primary/10 transition-colors" title="Sync from Database">
+                                <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                        </div>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="h-10 gap-2 shadow-sm font-semibold border-primary/20 hover:bg-primary/5">
+                                    <Plus className="h-4 w-4 text-primary" /> Modify Table
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 p-2">
+                                <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="cursor-pointer gap-2 mb-1">
+                                    <Upload className="h-4 w-4 text-indigo-500" /> Import Excel/CSV
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handlePasteFromClipboard} className="cursor-pointer gap-2 mb-1">
+                                    <Clipboard className="h-4 w-4 text-indigo-500" /> Paste Raw Data
+                                </DropdownMenuItem>
+                                <div className="h-px bg-border/50 my-1"/>
+                                <DropdownMenuItem onClick={() => { setEditingId(null); setIsDialogOpen(true); }} className="cursor-pointer gap-2 mb-1">
+                                     <Plus className="h-4 w-4 text-green-600" /> Insert Empty Row
+                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handlePasteAsNewColumn} className="cursor-pointer gap-2 mb-1">
+                                     <Plus className="h-4 w-4 text-green-600" /> Insert Custom Column
+                                 </DropdownMenuItem>
+                                <div className="h-px bg-border/50 my-1"/>
+                                <DropdownMenuItem onClick={() => setIsColumnDialogOpen(true)} className="cursor-pointer gap-2 mb-1">
+                                     <Columns className="h-4 w-4 text-primary" /> Manage Columns
+                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setHideEmpty(!hideEmpty)} className="cursor-pointer gap-2">
+                                     {hideEmpty ? <EyeOff className="h-4 w-4 text-orange-500" /> : <Eye className="h-4 w-4 text-orange-500" />}
+                                     {hideEmpty ? "Disable Strict View" : "Enable Strict View"}
+                                 </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Commit Changes */}
                         <Button
-                            className="bg-green-600 hover:bg-green-700 text-white"
                             onClick={() => {
                                 const updates: { id: string; field: string; value: any }[] = [];
                                 Object.entries(localEdits).forEach(([id, fields]) => {
@@ -733,110 +990,214 @@ export function StudentPlacementTable() {
                                 if (updates.length) batchUpdateMutation.mutate(updates);
                             }}
                             disabled={!Object.keys(localEdits).length || batchUpdateMutation.isPending}
+                            className="h-10 px-6 gap-2 shadow-md bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all font-bold"
                         >
-                            {batchUpdateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clipboard className="mr-2 h-4 w-4" />} Save Changes
-                        </Button>
-                        <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} disabled={!filteredData?.length}>
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete All
-                        </Button>
-                        <Button onClick={() => { setEditingId(null); setIsDialogOpen(true); }}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Record
+                            {batchUpdateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Save className="h-4 w-4 text-white" />}
+                            Commit Changes
                         </Button>
                     </div>
                 </div>
 
-                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This will permanently delete <b>{filteredData?.length}</b> record(s) currently listed.
-                                {globalSearch || Object.keys(filters).length > 0 ? " (Filtered results only)" : " (All records)"}
-                                <br />This action cannot be undone.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                                className="bg-red-600 hover:bg-red-700"
-                                onClick={() => {
-                                    if (filteredData?.length) {
-                                        const ids = filteredData.map(r => r.id);
-                                        deleteAllMutation.mutate(ids);
-                                    }
-                                }}
-                            >
-                                Confirm Delete
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
 
-                <AlertDialog open={isSuccessDialogOpen} onOpenChange={setIsSuccessDialogOpen}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle className="text-green-600 flex items-center gap-2">
-                                <CheckCircle2 className="h-5 w-5" /> Saved Successfully
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                                All changes have been committed to the database.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogAction onClick={() => setIsSuccessDialogOpen(false)}>OK</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
 
-                {/* Excel-like Tip */}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/30 px-3 py-1.5 rounded-md border border-blue-200 dark:border-blue-800 w-fit">
-                    <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                    <span><b>Excel Mode:</b> Click cell to select · Double-click or Enter to edit · <b>Ctrl+C/V</b> to copy/paste · Drag fill handle · <b>Save Changes</b> to commit edits</span>
-                </div>
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".xlsx, .xls, .csv" multiple />
 
-                {/* Global Search & Column Toggle */}
-                <div className="flex items-center gap-4 bg-muted/20 p-4 rounded-md">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Global Search..."
-                            className="pl-9 bg-background"
-                            value={globalSearch}
-                            onChange={(e) => setGlobalSearch(e.target.value)}
-                        />
+                {/* Bulk Action Context Toolbar */}
+                {selectedRowIds.size > 0 && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-5 border border-slate-700">
+                        <div className="flex items-center gap-2 font-semibold">
+                            <CheckSquare className="h-5 w-5 text-blue-400" />
+                            <span>{selectedRowIds.size} Selected</span>
+                        </div>
+                        <div className="w-px h-6 bg-slate-700 mx-2" />
+                        <Button variant="ghost" size="sm" onClick={handleBulkExport} className="hover:bg-slate-800 text-slate-200">
+                            <FileDown className="h-4 w-4 mr-2" /> Export
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={handleBulkDelete} className="hover:bg-red-900/50 text-red-400 hover:text-red-300">
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedRowIds(new Set())} className="hover:bg-slate-800 rounded-full h-8 w-8 ml-2">
+                            <X className="h-4 w-4 text-slate-400" />
+                        </Button>
                     </div>
+                )}
 
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="outline">Hidden Columns ({columnDefs.filter(c => !c.visible).length})</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader><DialogTitle>Manage Columns</DialogTitle></DialogHeader>
-                            <div className="grid grid-cols-2 gap-2">
-                                {columnDefs.map(col => (
-                                    <div key={col.key} className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={col.visible}
-                                            onChange={() => col.visible ? handleHideColumn(col.key) : handleUnhideColumn(col.key)}
-                                            id={`col-${col.key}`}
-                                        />
-                                        <label htmlFor={`col-${col.key}`}>{col.label}</label>
-                                    </div>
-                                ))}
+                {/* Peak Professional Unified Control Bar */}
+                <div className="flex flex-col gap-4 bg-background p-5 rounded-2xl border-2 border-primary/5 shadow-2xl mt-6 relative overflow-hidden group">
+                    {/* Decorative Background Element */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+                    
+                    <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-4 relative z-10">
+                        {/* Universal Search Section */}
+                        <div className="relative w-full xl:w-[280px] shrink-0">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-1.5 block">Universal Search</Label>
+                            <div className="relative">
+                                <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-primary/40 group-focus-within:text-primary transition-colors" />
+                                <Input
+                                    className="h-11 pl-10 text-sm font-semibold shadow-inner bg-muted/20 border-primary/10 hover:border-primary/30 focus-visible:ring-primary/20 transition-all rounded-xl"
+                                    placeholder="Type anything..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                             </div>
-                        </DialogContent>
-                    </Dialog>
-                </div>
-            </div>
+                        </div>
 
-            <div ref={tableRef} className="rounded-md border overflow-x-auto shadow-sm select-none" tabIndex={0}>
-                <Table className="min-w-[2000px] border-collapse">
-                    <TableHeader>
+                        <div className="hidden xl:block w-px h-12 bg-border/50 mx-2 self-end mb-0.5" />
+
+                        {/* Power Filtering Section */}
+                        <div className="flex-1">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-1.5 block">Precise Filtering</Label>
+                            <div className="flex flex-col sm:flex-row items-center gap-3">
+                                <Select value={newFilterField} onValueChange={setNewFilterField}>
+                                    <SelectTrigger className="h-11 w-full sm:w-[200px] text-sm font-bold bg-background shadow-sm rounded-xl border-primary/20 ring-offset-background focus:ring-2 focus:ring-primary/20 transition-all">
+                                        <div className="flex items-center gap-2">
+                                            <Filter className="h-4 w-4 text-primary/50" />
+                                            <SelectValue placeholder="Select Field" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {columnDefs.filter(f => !String(f.key).toLowerCase().includes('address') && !String(f.key).toLowerCase().includes('mail') && !String(f.key).toLowerCase().includes('hr_name') && !String(f.key).toLowerCase().includes('mobile') && !String(f.key).toLowerCase().includes('ref_no')).map(f => (
+                                            <SelectItem key={String(f.key)} value={String(f.key)} className="text-sm font-semibold">{f.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select value={newFilterValue} onValueChange={setNewFilterValue} disabled={!newFilterField}>
+                                    <SelectTrigger className="h-11 w-full sm:w-[200px] text-sm font-bold bg-background shadow-sm rounded-xl border-primary/20 ring-offset-background focus:ring-2 focus:ring-primary/20 transition-all">
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-primary/50" />
+                                            <SelectValue placeholder="Select Value" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[400px]">
+                                        <div className="p-2 sticky top-0 bg-background z-10 border-b">
+                                            <div className="relative">
+                                                <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                                <Input
+                                                    placeholder="Search..."
+                                                    value={filterValueSearch}
+                                                    onChange={(e) => setFilterValueSearch(e.target.value)}
+                                                    onKeyDown={(e) => e.stopPropagation()}
+                                                    className="h-8 pl-8 text-[11px] bg-muted/30 focus-visible:ring-primary/20"
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="p-1">
+                                            {getAvailableValues(newFilterField)
+                                                .filter(val => String(val).toLowerCase().includes(filterValueSearch.toLowerCase()))
+                                                .map((val: any) => (
+                                                    <SelectItem key={String(val)} value={String(val)} className="text-sm font-semibold">{String(val)}</SelectItem>
+                                                ))
+                                            }
+                                        </div>
+                                    </SelectContent>
+                                </Select>
+
+                                <Button size="lg" className="h-11 px-6 text-xs font-black shadow-lg bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-xl w-full sm:w-auto gap-2" onClick={handleAddFilter} disabled={!newFilterField || !newFilterValue}>
+                                    <Plus className="h-4 w-4" /> Apply
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="hidden xl:block w-px h-12 bg-border/50 mx-2 self-end mb-0.5" />
+
+                        {/* Action Suite */}
+                        <div className="shrink-0">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-1.5 block">Actions & Export</Label>
+                            <div className="flex items-center gap-3">
+                                <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
+                                    <SelectTrigger className="h-11 w-[140px] shadow-sm font-bold border-primary/20 bg-background text-[11px] rounded-xl">
+                                        <ArrowUpDown className="h-3.5 w-3.5 mr-2" />
+                                        <SelectValue placeholder="Sort" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="date-desc" className="text-xs font-medium">Newest to Oldest</SelectItem>
+                                        <SelectItem value="date-asc" className="text-xs font-medium">Oldest to Newest</SelectItem>
+                                        <SelectItem value="student-asc" className="text-xs font-medium">Student (A-Z)</SelectItem>
+                                        <SelectItem value="student-desc" className="text-xs font-medium">Student (Z-A)</SelectItem>
+                                        <SelectItem value="company-asc" className="text-xs font-medium">Company (A-Z)</SelectItem>
+                                        <SelectItem value="company-desc" className="text-xs font-medium">Company (Z-A)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="h-11 px-4 text-xs font-black shadow-sm border-2 border-primary/10 hover:bg-primary/5 transition-all rounded-xl gap-2">
+                                            <FileDown className="h-4 w-4 text-primary" /> Export
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl">
+                                        <DropdownMenuItem onClick={handleDownload} className="cursor-pointer gap-2 py-2.5 text-xs font-bold">
+                                            <FileDown className="h-4 w-4 text-blue-600" /> Current View (.xlsx)
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+
+                                <div className="h-11 flex items-center px-4 rounded-xl bg-primary/5 border border-primary/10 text-primary font-black text-xs min-w-[100px] justify-center shadow-inner">
+                                    {filteredData?.length || 0} Items
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Active Filter Chips */}
+                {activeFilters.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 mt-3 px-1">
+                        {activeFilters.map(filter => (
+                            <Badge key={filter.id} variant="secondary" className="px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 bg-primary/10 text-primary border-primary/20 animate-in zoom-in-95">
+                                <span className="opacity-70">{filter.label}:</span>
+                                {filter.value}
+                                <button onClick={() => removeFilter(filter.id)} className="ml-1 rounded-full hover:bg-primary/20 p-0.5 transition-colors">
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </Badge>
+                        ))}
+                        <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-destructive hover:bg-destructive/10" onClick={() => setActiveFilters([])}>
+                            Clear All Filters
+                        </Button>
+                    </div>
+                )}
+            </CardHeader>
+            <CardContent className="p-0 relative">
+                {/* Thinned Professional Top Scrollbar */}
+                <div 
+                    ref={topScrollRef}
+                    className="overflow-x-auto overflow-y-hidden border-b h-3 bg-muted/20 custom-scrollbar relative z-10"
+                >
+                    <div style={{ width: `${tableScrollWidth}px` }} className="h-px block" />
+                </div>
+
+                <div 
+                    ref={tableRef} 
+                    className="rounded-none overflow-auto relative shadow-sm select-none max-h-[70vh] custom-scrollbar border" 
+                    tabIndex={0}
+                >
+                    {/* Floating Scroll to Top Button (Fixed for maximum visibility) */}
+                    {showScrollTop && (
+                        <div className="fixed bottom-10 right-10 z-[60] flex justify-end">
+                            <Button
+                                onClick={scrollToTop}
+                                className="rounded-full w-14 h-14 shadow-2xl bg-primary hover:bg-primary/90 text-white flex items-center justify-center animate-in fade-in slide-in-from-bottom-4 transition-all hover:scale-110 active:scale-95 border-2 border-white/20"
+                                size="icon"
+                            >
+                                <ArrowUp className="h-7 w-7" />
+                            </Button>
+                        </div>
+                    )}
+                    <Table className="min-w-[2000px] border-separate border-spacing-0">
+                    <TableHeader className="sticky top-0 z-30 bg-background shadow-sm">
                         <TableRow>
-                            <TableHead className="w-[60px] font-bold bg-muted/50">S.No</TableHead>
+                            <TableHead className="w-[40px] sticky left-0 top-0 z-50 bg-background border-b border-r text-center">
+                                <Checkbox 
+                                    checked={rowsToShow?.length > 0 && selectedRowIds.size === rowsToShow.length}
+                                    onCheckedChange={handleSelectAll}
+                                />
+                            </TableHead>
+                            <TableHead className="w-[60px] font-bold sticky left-[40px] top-0 z-50 bg-background border-b border-r text-center">S.No</TableHead>
                             {visibleColumns.map((col) => (
-                                <TableHead key={col.key} className="font-bold bg-muted/50 min-w-[150px] group">
+                                <TableHead key={col.key} className="font-bold bg-background border-b border-r min-w-[150px] group sticky top-0 z-30">
                                     {editingHeaderKey === col.key ? (
                                         <div className="flex items-center gap-1">
                                             <Input
@@ -869,7 +1230,7 @@ export function StudentPlacementTable() {
                                     )}
                                 </TableHead>
                             ))}
-                            <TableHead className="text-right font-bold bg-muted/50 sticky right-0 z-10 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]">
+                            <TableHead className="text-right font-bold bg-background border-b sticky right-0 top-0 z-40 shadow-[-2px_0_5px_rgba(0,0,0,0.05)] border-l">
                                 Actions
                             </TableHead>
                         </TableRow>
@@ -877,12 +1238,18 @@ export function StudentPlacementTable() {
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={visibleColumns.length + 2} className="text-center h-24">Loading...</TableCell></TableRow>
-                        ) : filteredData?.length === 0 ? (
+                        ) : rowsToShow?.length === 0 ? (
                             <TableRow><TableCell colSpan={visibleColumns.length + 2} className="text-center h-24">No records found</TableCell></TableRow>
                         ) : (
-                            filteredData?.map((record, rowIndex) => (
-                                <TableRow key={record.id} className="hover:bg-muted/5">
-                                    <TableCell className="font-medium text-muted-foreground">{rowIndex + 1}</TableCell>
+                            rowsToShow?.map((record, rowIndex) => (
+                                <TableRow key={record.id || `row-${rowIndex}`} className="hover:bg-muted/5 border-b">
+                                    <TableCell className="sticky left-0 bg-background z-10 border-r border-b text-center">
+                                        <Checkbox 
+                                                checked={selectedRowIds.has((record.id || `temp-${rowIndex}`) as string)}
+                                                onCheckedChange={() => handleSelectRow((record.id || `temp-${rowIndex}`) as string)}
+                                            />
+                                    </TableCell>
+                                    <TableCell className="font-medium text-muted-foreground sticky left-[40px] bg-background z-10 border-r text-center">{rowIndex + 1}</TableCell>
                                     {visibleColumns.map((col, colIndex) => {
                                         const isSelected = selectedCell?.row === rowIndex && selectedCell?.col === colIndex;
                                         const isInRange = isCellInSelection(rowIndex, colIndex);
@@ -894,7 +1261,7 @@ export function StudentPlacementTable() {
                                         return (
                                             <TableCell
                                                 key={col.key}
-                                                className={`p-0 relative excel-cell cursor-cell transition-colors ${isSelected ? 'ring-2 ring-blue-500 ring-inset bg-blue-50/50 dark:bg-blue-950/30 z-10' :
+                                                className={`p-0 relative excel-cell cursor-cell transition-colors border-r border-b ${isSelected ? 'ring-2 ring-blue-500 ring-inset bg-blue-50/50 dark:bg-blue-950/30 z-10' :
                                                     isInRange ? 'bg-blue-50/80 dark:bg-blue-950/20' :
                                                         isInFill ? 'bg-green-50/80 dark:bg-green-950/20 ring-1 ring-green-400 ring-inset' :
                                                             ''
@@ -940,7 +1307,21 @@ export function StudentPlacementTable() {
                                                     />
                                                 ) : (
                                                     <div className="px-2 py-1.5 min-h-[32px] flex items-center text-sm truncate">
-                                                        {String(cellValue) || <span className="text-muted-foreground">-</span>}
+                                                        {col.key === 'package_lpa' && cellValue ? (
+                                                            <span className="font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-800">
+                                                                ₹ {cellValue} LPA
+                                                            </span>
+                                                        ) : col.key === 'salary' && cellValue ? (
+                                                            <span className="font-medium text-slate-700 dark:text-slate-300">
+                                                                ₹ {Number(cellValue).toLocaleString('en-IN')}
+                                                            </span>
+                                                        ) : col.key === 'offer_type' && cellValue ? (
+                                                            <Badge variant="outline" className={`font-semibold ${String(cellValue).toLowerCase().includes('intern') ? 'border-purple-200 text-purple-700 bg-purple-50' : 'border-blue-200 text-blue-700 bg-blue-50'}`}>
+                                                                {String(cellValue)}
+                                                            </Badge>
+                                                        ) : (
+                                                            String(cellValue) || <span className="text-muted-foreground">-</span>
+                                                        )}
                                                     </div>
                                                 )}
 
@@ -955,26 +1336,51 @@ export function StudentPlacementTable() {
                                             </TableCell>
                                         );
                                     })}
-                                    <TableCell className="text-right sticky right-0 bg-background shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="icon" onClick={() => { setEditingId(record.id); setIsDialogOpen(true); }}>
-                                                <Pencil className="h-4 w-4 text-blue-500" />
+                                    <TableCell className="text-right sticky right-0 bg-background/95 backdrop-blur-sm shadow-[-2px_0_5px_rgba(0,0,0,0.05)] border-l border-b">
+                                        <div className="flex justify-end gap-1">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={() => { setEditingId(record.id); setIsDialogOpen(true); }}
+                                                className="text-primary hover:bg-primary/10 hover:text-primary h-8 w-8 rounded-full transition-all"
+                                            >
+                                                <Pencil className="h-4 w-4" />
                                             </Button>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon"
+                                                        className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-full transition-all"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Delete Record?</AlertDialogTitle>
-                                                        <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => deleteMutation.mutate(record.id)} className="bg-red-600">Delete</AlertDialogAction>
-                                                    </AlertDialogFooter>
+                                                <AlertDialogContent className="rounded-3xl p-0 border-none shadow-2xl overflow-hidden">
+                                                    <div className="bg-destructive/10 p-6 border-b border-destructive/10">
+                                                        <AlertDialogHeader>
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="p-2.5 bg-destructive/10 rounded-2xl">
+                                                                    <Trash2 className="h-5 w-5 text-destructive" />
+                                                                </div>
+                                                                <AlertDialogTitle className="text-xl font-black text-destructive/90">Delete Record?</AlertDialogTitle>
+                                                            </div>
+                                                        </AlertDialogHeader>
+                                                    </div>
+                                                    <div className="p-8">
+                                                        <AlertDialogDescription className="text-sm font-semibold text-muted-foreground">
+                                                            Are you sure you want to permanently delete the placement record for <b>{record.student_name}</b>? This action cannot be undone.
+                                                        </AlertDialogDescription>
+                                                        <AlertDialogFooter className="mt-8">
+                                                            <AlertDialogCancel className="h-11 rounded-xl font-bold border-2 border-primary/5">Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction 
+                                                                onClick={() => deleteMutation.mutate(record.id)} 
+                                                                className="h-11 bg-destructive hover:bg-destructive/90 text-white rounded-xl font-bold px-6 shadow-lg shadow-destructive/20"
+                                                            >
+                                                                Delete Record
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </div>
                                                 </AlertDialogContent>
                                             </AlertDialog>
                                         </div>
@@ -985,6 +1391,50 @@ export function StudentPlacementTable() {
                     </TableBody>
                 </Table>
             </div>
+          </CardContent>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete <b>{rowsToShow?.length}</b> record(s) currently listed.
+                            {searchTerm || Object.keys(activeFilters).length > 0 ? " (Filtered results only)" : " (All records)"}
+                            <br />This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={() => {
+                                if (rowsToShow?.length) {
+                                    const ids = rowsToShow.map((r: any) => r.id);
+                                    deleteAllMutation.mutate(ids);
+                                }
+                            }}
+                        >
+                            Confirm Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isSuccessDialogOpen} onOpenChange={setIsSuccessDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-green-600 flex items-center gap-2">
+                            <CheckCircle2 className="h-5 w-5" /> Saved Successfully
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            All changes have been committed to the database.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => setIsSuccessDialogOpen(false)}>OK</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             {/* Add Column Dialog */}
             <Dialog open={isColumnDialogOpen} onOpenChange={setIsColumnDialogOpen}>
@@ -1006,7 +1456,7 @@ export function StudentPlacementTable() {
                 editingId={editingId}
                 customColumns={columnDefs.filter(c => c.isCustom).map(c => c.key)}
             />
-        </div>
+        </Card>
     );
 }
 
