@@ -52,9 +52,7 @@ const tpoNavItems: NavItem[] = [
   { title: "Drive Management", url: "/tpo/drives", icon: CalendarRange },
   { title: "Application Pool", url: "/tpo/applications", icon: Inbox },
   { title: "Pending Approvals", url: "/tpo/approvals", icon: ClipboardCheck },
-  { title: "Company Database", url: "/tpo/companies", icon: Building2 },
   { title: "Students Master", url: "/tpo/students", icon: Users },
-  { title: "Analytics", url: "/tpo/analytics", icon: BarChart3 },
   { title: "User Management", url: "/tpo/users", icon: UserPlus },
   { title: "Settings", url: "/tpo/settings", icon: Settings },
 ];
@@ -62,17 +60,12 @@ const tpoNavItems: NavItem[] = [
 const hodNavItems: NavItem[] = [
   { title: "Pending Students", url: "/hod", icon: ClipboardCheck },
   { title: "Drive Applications", url: "/hod/applications", icon: FileCheck },
-  { title: "Manage Students", url: "/hod/students", icon: UserPlus },
-  { title: "Verification History", url: "/hod/history", icon: History },
-  { title: "Settings", url: "/hod/settings", icon: Settings },
+  { title: "Student Data Base", url: "/hod/history", icon: Database },
 ];
 
 const studentNavItems: NavItem[] = [
   { title: "Dashboard", url: "/student", icon: LayoutDashboard },
-  { title: "My Profile", url: "/student/profile", icon: GraduationCap },
   { title: "Placement Drives", url: "/student/drives", icon: Briefcase },
-  { title: "Resources", url: "/student/resources", icon: BookOpen },
-  { title: "Settings", url: "/student/settings", icon: Settings },
 ];
 
 const managementNavItems: NavItem[] = [
@@ -82,11 +75,8 @@ const managementNavItems: NavItem[] = [
   { title: "Settings", url: "/management/settings", icon: Settings },
 ];
 
-
-
-
 export function AppSidebar() {
-  const { role } = useAuth();
+  const { role, profile } = useAuth();
   const { state } = useSidebar();
   const location = useLocation();
   const collapsed = state === "collapsed";
@@ -132,7 +122,7 @@ export function AppSidebar() {
       case "management":
         return "Management";
       case "student":
-        return "Student Portal";
+        return profile?.full_name || "Student Portal";
 
       default:
         return "Dashboard";
@@ -163,7 +153,7 @@ export function AppSidebar() {
               <span className="text-sm font-semibold text-sidebar-foreground">
                 {getRoleLabel()}
               </span>
-              <span className="text-xs text-sidebar-foreground/60">Placement System</span>
+              <span className="text-xs text-sidebar-foreground/60">Placement Portal</span>
             </div>
           )}
         </div>

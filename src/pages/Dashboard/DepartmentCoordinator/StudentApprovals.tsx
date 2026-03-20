@@ -102,8 +102,8 @@ export default function StudentApprovals() {
       s.overall_cgpa || s.current_cgpa || "",
       s.current_backlogs || "0",
       s.history_of_arrears_count || s.history_of_arrear || "0",
-      s.tenth_percentage || s.tenth_mark || "",
-      s.twelfth_percentage || s.twelfth_mark || "",
+      s.percentage_10th || s.mark_10th || "",
+      s.percentage_12th || s.mark_12th || "",
       s.skills || "",
       s.preferred_job_role || ""
     ]);
@@ -183,15 +183,16 @@ export default function StudentApprovals() {
                 </div>
               </div>
             ) : (
-              <Table className="w-max min-w-full">
+              <Table className="w-max min-w-full border-separate border-spacing-0">
                 <TableHeader className="bg-muted/90 border-b">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="min-w-[100px] text-[10px] uppercase font-black py-4 sticky left-0 z-20 bg-muted/90 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</TableHead>
-                    <TableHead className="min-w-[120px] text-[10px] uppercase font-black py-4 sticky left-[100px] z-20 bg-muted/90 backdrop-blur border-r text-center">Placement Interest</TableHead>
-                    <TableHead className="min-w-[180px] text-[10px] uppercase font-black py-4 sticky left-[220px] z-20 bg-muted/90 backdrop-blur">Student Name</TableHead>
-                    <TableHead className="min-w-[120px] text-[10px] uppercase font-black sticky left-[400px] z-20 bg-muted/90 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r">Reg No</TableHead>
-                    {STUDENT_COLUMNS.filter(col => col.key !== 'first_name' && col.key !== 'last_name' && col.key !== 'reg_no' && col.key !== 'interested_in_placement').map((col) => (
-                      <TableHead key={col.key} className="min-w-[140px] text-[10px] uppercase font-black whitespace-nowrap px-4 border-r border-border/40">
+                    <TableHead className="min-w-[60px] w-[60px] text-[10px] uppercase font-black py-4 sticky left-0 z-30 bg-muted backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</TableHead>
+                    <TableHead className="min-w-[100px] w-[100px] text-[10px] uppercase font-black py-4 sticky left-[60px] z-30 bg-muted backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-center">Status</TableHead>
+                    <TableHead className="min-w-[170px] w-[170px] text-[10px] uppercase font-black py-4 sticky left-[160px] z-30 bg-muted backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Student Name</TableHead>
+                    <TableHead className="min-w-[130px] w-[130px] text-[10px] uppercase font-black sticky left-[330px] z-30 bg-muted backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r">Reg No</TableHead>
+                    <TableHead className="min-w-[100px] w-[100px] text-[10px] uppercase font-black py-4 sticky left-[460px] z-30 bg-muted backdrop-blur border-r text-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Interest</TableHead>
+                    {STUDENT_COLUMNS.filter(col => !['first_name', 'last_name', 'reg_no', 'interested_in_placement'].includes(col.key)).map((col) => (
+                      <TableHead key={col.key} className="min-w-[180px] text-[10px] uppercase font-black whitespace-nowrap px-4 border-r border-border/40">
                         {col.label}
                       </TableHead>
                     ))}
@@ -200,8 +201,8 @@ export default function StudentApprovals() {
                 <TableBody>
                   {filteredStudents.map((student) => (
                     <TableRow key={student.id} className="hover:bg-muted/30 transition-colors border-b last:border-0 text-xs">
-                      <TableCell className="py-1 px-2 sticky left-0 z-10 bg-background/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                        <div className="flex items-center gap-1 bg-background/80 rounded-md p-1">
+                      <TableCell className="py-1 px-2 sticky left-0 z-20 bg-background/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[60px]">
+                        <div className="flex items-center gap-1 bg-background/80 rounded-md p-1 border">
                           <Button 
                             variant="ghost" 
                             size="sm" 
@@ -233,22 +234,25 @@ export default function StudentApprovals() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell className="sticky left-[100px] z-10 bg-background/95 backdrop-blur border-r text-center">
-                        {student.interested_in_placement?.toLowerCase() === 'yes' ? (
-                          <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100 uppercase text-[9px] font-bold">Interested</Badge>
-                        ) : (
-                          <Badge variant="destructive" className="bg-red-50 text-red-600 border-red-100 hover:bg-red-50 uppercase text-[9px] font-bold">NOT Interested</Badge>
-                        )}
+                      <TableCell className="sticky left-[60px] z-20 bg-background/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[100px] text-center">
+                        <Badge variant="secondary" className="text-[8px] font-bold px-1.5 h-4 justify-center bg-slate-100 text-slate-600 border-slate-200">PENDING</Badge>
                       </TableCell>
-                      <TableCell className="font-bold py-2 sticky left-[220px] z-10 bg-background/95 backdrop-blur whitespace-nowrap">
+                      <TableCell className="font-bold py-2 sticky left-[160px] z-20 bg-background/95 backdrop-blur whitespace-nowrap uppercase tracking-tighter text-slate-900 pr-4 w-[170px]">
                         {student.first_name} {student.last_name}
                       </TableCell>
-                      <TableCell className="font-mono text-[10px] sticky left-[400px] z-10 bg-background/95 backdrop-blur border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap">
+                      <TableCell className="font-mono text-[10px] sticky left-[330px] z-20 bg-background/95 backdrop-blur border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap font-bold text-primary px-4 w-[130px]">
                         {student.reg_no}
                       </TableCell>
+                      <TableCell className="sticky left-[460px] z-20 bg-background/95 backdrop-blur border-r text-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[100px]">
+                        {student.interested_in_placement?.toLowerCase() === 'yes' ? (
+                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 uppercase text-[8px] font-black tracking-widest px-2">Interested</Badge>
+                        ) : (
+                          <Badge variant="destructive" className="bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-50 uppercase text-[8px] font-black tracking-widest px-2">NO</Badge>
+                        )}
+                      </TableCell>
                       
-                      {STUDENT_COLUMNS.filter(col => col.key !== 'first_name' && col.key !== 'last_name' && col.key !== 'reg_no' && col.key !== 'interested_in_placement').map((col) => (
-                        <TableCell key={col.key} className="whitespace-nowrap px-4 truncate max-w-[200px] border-r border-border/20 text-muted-foreground font-medium" title={String(student[col.key] || "-")}>
+                      {STUDENT_COLUMNS.filter(col => !['first_name', 'last_name', 'reg_no', 'interested_in_placement'].includes(col.key)).map((col) => (
+                        <TableCell key={col.key} className="whitespace-nowrap px-4 border-r border-border/20 text-slate-600 font-semibold" title={String(student[col.key] || "-")}>
                           {student[col.key] || "-"}
                         </TableCell>
                       ))}

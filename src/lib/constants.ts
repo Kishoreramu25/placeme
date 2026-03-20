@@ -1,7 +1,8 @@
 export const STUDENT_COLUMNS = [
+  { key: 'interested_in_placement', label: 'Placement Interest' },
   { key: 'first_name', label: 'First Name' },
   { key: 'last_name', label: 'Last Name' },
-  { key: 'reg_no', label: 'Register Number' },
+  { key: 'reg_no', label: 'Reg No' },
   { key: 'roll_number', label: 'Roll Number' },
   { key: 'email_address', label: 'Email Address' },
   { key: 'alternate_email', label: 'Alternate Email' },
@@ -22,20 +23,20 @@ export const STUDENT_COLUMNS = [
   { key: 'religion', label: 'Religion' },
   { key: 'community', label: 'Community' },
   { key: 'caste', label: 'Caste' },
-  
-  // Academic
-  { key: 'tenth_board', label: '10th Board' },
-  { key: 'tenth_school_name', label: '10th School' },
-  { key: 'tenth_percentage', label: '10th %' },
-  { key: 'twelfth_school_board', label: '12th Board' },
-  { key: 'twelfth_school_name', label: '12th School' },
-  { key: 'twelfth_percentage', label: '12th %' },
+  { key: 'board_10th', label: '10th Board' },
+  { key: 'school_name_10th', label: '10th School' },
+  { key: 'mark_10th', label: '10th Mark' },
+  { key: 'percentage_10th', label: '10th %' },
+  { key: 'board_12th', label: '12th Board' },
+  { key: 'school_name_12th', label: '12th School' },
+  { key: 'mark_12th', label: '12th Mark' },
+  { key: 'percentage_12th', label: '12th %' },
+  { key: 'twelfth_reg_no', label: '12th Reg No' },
+  { key: 'school_address_12th', label: '12th School Address' },
   { key: 'diploma_studied', label: 'Diploma Studied' },
   { key: 'diploma_institute_name', label: 'Diploma Institute' },
   { key: 'diploma_stream', label: 'Diploma Stream' },
   { key: 'work_experience', label: 'Work Experience' },
-  
-  // College Performance
   { key: 'current_year', label: 'Current Year' },
   { key: 'current_semester', label: 'Current Semester' },
   { key: 'sem_1_cgpa', label: 'Sem 1 CGPA' },
@@ -51,8 +52,6 @@ export const STUDENT_COLUMNS = [
   { key: 'current_backlogs', label: 'Current Backlogs' },
   { key: 'history_of_arrear', label: 'History of Arrear' },
   { key: 'history_of_arrears_count', label: 'Arrears Count' },
-  
-  // College Info
   { key: 'degree_branches', label: 'Department / Branch' },
   { key: 'regulations', label: 'Regulations' },
   { key: 'batches', label: 'Batch' },
@@ -62,8 +61,6 @@ export const STUDENT_COLUMNS = [
   { key: 'mode_of_education', label: 'Mode of Education' },
   { key: 'mode_of_admission', label: 'Mode of Admission' },
   { key: 'student_status', label: 'Student Status' },
-  
-  // Family & Communication
   { key: 'father_guardian_name', label: 'Father/Guardian Name' },
   { key: 'occupation_father_guardian', label: 'Father Occupation' },
   { key: 'father_mobile_number', label: 'Father Mobile' },
@@ -75,9 +72,6 @@ export const STUDENT_COLUMNS = [
   { key: 'communication_pincode', label: 'Pincode' },
   { key: 'is_hosteller', label: 'Hosteller/Day Scholar' },
   { key: 'hostel_name', label: 'Hostel Name' },
-  
-  // Placement
-  { key: 'interested_in_placement', label: 'Interested in Placement' },
   { key: 'placement_opt_out_reason', label: 'Opt Out Reason' },
   { key: 'photo_url', label: 'Photo URL' },
   { key: 'resume_url', label: 'Resume URL' },
@@ -92,8 +86,6 @@ export const STUDENT_COLUMNS = [
   { key: 'hackerrank_url', label: 'HackerRank' },
   { key: 'preferred_job_role', label: 'Preferred Role' },
   { key: 'preferred_location', label: 'Preferred Location' },
-  
-  // Other
   { key: 'extra_curricular', label: 'Extracurricular' },
   { key: 'geographic_classification', label: 'Geographic Area' },
   { key: 'is_physically_challenged', label: 'Physically Challenged' },

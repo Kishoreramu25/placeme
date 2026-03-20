@@ -44,7 +44,8 @@ import {
   ArrowUpDown,
   Eye,
   Loader2,
-  Award
+  Award,
+  Sparkles
 } from "lucide-react";
 import {
   Dialog,
@@ -98,12 +99,16 @@ export const COLUMN_DEFS = [
   { key: "religion", label: "Religion", visible: false, category: "Personal" },
   { key: "community", label: "Community", visible: false, category: "Personal" },
   { key: "caste", label: "Caste", visible: false, category: "Personal" },
-  { key: "tenth_board", label: "10th Board", visible: false, category: "Academic" },
-  { key: "tenth_school", label: "10th School", visible: false, category: "Academic" },
-  { key: "tenth_percentage", label: "10th %", visible: false, category: "Academic" },
-  { key: "twelfth_board", label: "12th Board", visible: false, category: "Academic" },
-  { key: "twelfth_school", label: "12th School", visible: false, category: "Academic" },
-  { key: "twelfth_percentage", label: "12th %", visible: false, category: "Academic" },
+  { key: "board_10th", label: "10th Board", visible: false, category: "Academic" },
+  { key: "school_name_10th", label: "10th School", visible: false, category: "Academic" },
+  { key: "mark_10th", label: "10th Mark", visible: false, category: "Academic" },
+  { key: "percentage_10th", label: "10th %", visible: false, category: "Academic" },
+  { key: "board_12th", label: "12th Board", visible: false, category: "Academic" },
+  { key: "school_name_12th", label: "12th School", visible: false, category: "Academic" },
+  { key: "mark_12th", label: "12th Mark", visible: false, category: "Academic" },
+  { key: "percentage_12th", label: "12th %", visible: false, category: "Academic" },
+  { key: "twelfth_reg_no", label: "12th Reg No", visible: false, category: "Academic" },
+  { key: "school_address_12th", label: "12th School Address", visible: false, category: "Academic" },
   { key: "diploma_studied", label: "Diploma", visible: false, category: "Academic" },
   { key: "diploma_institute", label: "Diploma Inst", visible: false, category: "Academic" },
   { key: "diploma_stream", label: "Diploma Stream", visible: false, category: "Academic" },
@@ -328,12 +333,12 @@ export default function ApplicationManagement() {
 
   const getStatusBadge = (status: string) => {
     const s = status?.toLowerCase() || "pending";
-    if (s === "selected" || s === "placed") return <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 border-none shadow-sm"><CheckCircle2 className="h-3 w-3 mr-1" /> PLACED</Badge>;
-    if (s === "shortlisted") return <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 border-none shadow-sm"><Activity className="h-3 w-3 mr-1" /> SHORTLISTED</Badge>;
-    if (s === "interview_scheduled") return <Badge className="bg-gradient-to-r from-purple-500 to-violet-600 border-none shadow-sm"><Calendar className="h-3 w-3 mr-1" /> INTERVIEW SET</Badge>;
-    if (s === "rejected_by_tpo") return <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-200"><XCircle className="h-3 w-3 mr-1" /> REJECTED</Badge>;
-    if (s === "pending_tpo" || s === "approved_by_hod") return <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200">AWAITING TPO</Badge>;
-    return <Badge variant="secondary" className="bg-slate-100 text-slate-600">{status?.toUpperCase().replace(/_/g, ' ') || 'PENDING'}</Badge>;
+    if (s === "selected" || s === "placed") return <Badge className="bg-emerald-600 text-white border-0 px-3 rounded-md font-black text-[9px] tracking-[0.2em] shadow-lg shadow-emerald-500/20"><CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> PLACED</Badge>;
+    if (s === "shortlisted") return <Badge className="bg-indigo-600 text-white border-0 px-3 rounded-md font-black text-[9px] tracking-[0.2em] shadow-lg shadow-indigo-500/20"><Activity className="h-3.5 w-3.5 mr-1.5" /> SHORTLISTED</Badge>;
+    if (s === "interview_scheduled") return <Badge className="bg-purple-600 text-white border-0 px-3 rounded-md font-black text-[9px] tracking-[0.2em] shadow-lg shadow-purple-500/20"><Calendar className="h-3.5 w-3.5 mr-1.5" /> INTERVIEWING</Badge>;
+    if (s === "rejected_by_tpo") return <Badge className="bg-rose-600 text-white border-0 px-3 rounded-md font-black text-[9px] tracking-[0.2em] shadow-lg shadow-rose-500/20"><XCircle className="h-3.5 w-3.5 mr-1.5" /> REJECTED</Badge>;
+    if (s === "pending_tpo" || s === "approved_by_hod") return <Badge className="bg-blue-600 text-white border-0 px-3 rounded-md font-black text-[9px] tracking-[0.2em] shadow-lg shadow-blue-500/20"><Clock className="h-3.5 w-3.5 mr-1.5" /> AWAITING TPO</Badge>;
+    return <Badge className="bg-slate-500 text-white border-0 px-3 rounded-md font-black text-[9px] tracking-[0.2em] text-white"> {status?.toUpperCase().replace(/_/g, ' ') || 'APPLIED'}</Badge>;
   };
 
   return (
@@ -697,9 +702,9 @@ export default function ApplicationManagement() {
       </Dialog>
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-6xl max-h-[95vh] p-0 overflow-hidden border-none shadow-2xl rounded-3xl bg-slate-50">
+        <DialogContent className="max-w-6xl h-[92vh] p-0 overflow-hidden border-none shadow-2xl rounded-3xl bg-slate-50">
           {selectedApp && (
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full min-h-0">
                <div className="bg-white p-10 border-b relative">
                   <div className="absolute top-0 right-0 p-4">
                      <Badge className="bg-slate-100 text-slate-400 font-mono text-[10px] border-none">REF: {selectedApp.id?.split('-')[0]}</Badge>
@@ -719,33 +724,33 @@ export default function ApplicationManagement() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-3 text-right">
-                       <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Active Status Protocol</div>
+                       <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Application Status</div>
                        {getStatusBadge(selectedApp.status)}
                        <div className="mt-2 grid grid-cols-2 gap-2">
-                          <Button variant="outline" size="sm" className="h-9 font-bold text-[10px] tracking-tighter px-4" onClick={() => window.open(selectedApp.resume_url, '_blank')}>Dossier Output</Button>
-                          <Button variant="outline" size="sm" className="h-9 font-bold text-[10px] tracking-tighter px-4" onClick={() => window.open(selectedApp.photo_url, '_blank')}>Intel Metadata</Button>
+                          <Button variant="outline" size="sm" className="h-9 font-bold text-[10px] tracking-tighter px-4" onClick={() => window.open(selectedApp.resume_url, '_blank')}>Resume</Button>
+                          <Button variant="outline" size="sm" className="h-9 font-bold text-[10px] tracking-tighter px-4" onClick={() => window.open(selectedApp.photo_url, '_blank')}>Photo</Button>
                        </div>
                     </div>
                   </div>
                </div>
 
-               <div className="flex-1 flex overflow-hidden">
+               <div className="flex-1 flex min-h-0 overflow-hidden">
                   <div className="w-80 bg-slate-50 border-r p-8 overflow-y-auto space-y-10">
                      <div className="space-y-6">
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><TrendingUp className="h-3 w-3" /> Target Metrics</p>
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><TrendingUp className="h-3 w-3" /> Profile Metrics</p>
                         <div className="space-y-4">
                            <div className="bg-white p-5 rounded-3xl border shadow-sm">
-                              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">AGGREGATE CGPA</p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">OVERALL CGPA</p>
                               <p className="text-3xl font-black text-primary tracking-tighter">{selectedApp.overall_cgpa}</p>
                            </div>
                            <div className="bg-white p-5 rounded-3xl border shadow-sm">
-                              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">TARGET REMUNERATION</p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">OFFERED CTC</p>
                               <p className="text-xl font-black text-emerald-600 tracking-tighter">₹{selectedApp.ctc_amount?.toLocaleString()}</p>
                            </div>
                         </div>
                      </div>
                      <div className="space-y-6">
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Building2 className="h-3 w-3" /> Target Entity</p>
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Building2 className="h-3 w-3" /> Applied For</p>
                         <div className="space-y-2">
                            <p className="text-sm font-black text-slate-900">{selectedApp.company_name}</p>
                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{selectedApp.role_offered}</p>
@@ -753,15 +758,15 @@ export default function ApplicationManagement() {
                      </div>
                   </div>
                   
-                  <div className="flex-1 bg-white overflow-y-auto">
+                  <div className="flex-1 bg-white overflow-y-auto min-h-0">
                     <Tabs defaultValue="personal" className="w-full">
                       <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md px-10 py-4 border-b">
                         <TabsList className="bg-slate-100/50 p-1 gap-2 rounded-2xl w-fit">
-                          <TabsTrigger value="personal" className="px-8 font-black text-[10px] uppercase rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg">Intelligence</TabsTrigger>
-                          <TabsTrigger value="academic" className="px-8 font-black text-[10px] uppercase rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg">Education</TabsTrigger>
+                          <TabsTrigger value="personal" className="px-8 font-black text-[10px] uppercase rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg">Personal</TabsTrigger>
+                          <TabsTrigger value="academic" className="px-8 font-black text-[10px] uppercase rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg">Academic</TabsTrigger>
                           <TabsTrigger value="professional" className="px-8 font-black text-[10px] uppercase rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg">Skills</TabsTrigger>
-                          <TabsTrigger value="family" className="px-8 font-black text-[10px] uppercase rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg">Unit</TabsTrigger>
-                          <TabsTrigger value="actions" className="px-8 font-black text-[10px] uppercase rounded-xl bg-slate-900 text-white data-[state=active]:bg-primary data-[state=active]:text-white">Overrides</TabsTrigger>
+                          <TabsTrigger value="family" className="px-8 font-black text-[10px] uppercase rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg">Family</TabsTrigger>
+                          <TabsTrigger value="actions" className="px-8 font-black text-[10px] uppercase rounded-xl bg-slate-900 text-white data-[state=active]:bg-primary data-[state=active]:text-white">Actions</TabsTrigger>
                         </TabsList>
                       </div>
 
@@ -769,24 +774,24 @@ export default function ApplicationManagement() {
                         <TabsContent value="personal" className="m-0 space-y-12 animate-in fade-in slide-in-from-bottom-2">
                           <div className="grid grid-cols-2 gap-12">
                              <div className="space-y-8">
-                                <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em]">Biometric Metadata</h4>
+                                <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em]">Profile Details</h4>
                                 <div className="space-y-6">
-                                   <div className="flex items-center justify-between border-b pb-4"><span className="text-xs text-slate-400 font-bold uppercase">Designation ID</span><span className="font-black text-slate-900">{selectedApp.roll_number}</span></div>
-                                   <div className="flex items-center justify-between border-b pb-4"><span className="text-xs text-slate-400 font-bold uppercase">Biological Sex</span><span className="font-black text-slate-900">{selectedApp.gender}</span></div>
-                                   <div className="flex items-center justify-between border-b pb-4"><span className="text-xs text-slate-400 font-bold uppercase">Origin Timestamp</span><span className="font-black text-slate-900">{selectedApp.date_of_birth}</span></div>
-                                   <div className="flex items-center justify-between border-b pb-4"><span className="text-xs text-slate-400 font-bold uppercase">Primary Identification (Aadhar)</span><span className="font-black text-slate-900 font-mono tracking-tighter">{selectedApp.aadhar_number}</span></div>
+                                   <div className="flex items-center justify-between border-b pb-4"><span className="text-xs text-slate-400 font-bold uppercase">Roll Number</span><span className="font-black text-slate-900">{selectedApp.roll_number}</span></div>
+                                   <div className="flex items-center justify-between border-b pb-4"><span className="text-xs text-slate-400 font-bold uppercase">Gender</span><span className="font-black text-slate-900">{selectedApp.gender}</span></div>
+                                   <div className="flex items-center justify-between border-b pb-4"><span className="text-xs text-slate-400 font-bold uppercase">Date of Birth</span><span className="font-black text-slate-900">{selectedApp.date_of_birth}</span></div>
+                                   <div className="flex items-center justify-between border-b pb-4"><span className="text-xs text-slate-400 font-bold uppercase">Aadhar Number</span><span className="font-black text-slate-900 font-mono tracking-tighter">{selectedApp.aadhar_number}</span></div>
                                 </div>
                              </div>
                              <div className="space-y-8">
-                                <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em]">Contact Protocols</h4>
+                                <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em]">Contact Details</h4>
                                 <div className="space-y-4">
                                    <div className="p-5 bg-slate-100/50 rounded-2xl flex items-center gap-5 transition-all hover:bg-slate-100">
                                       <div className="h-10 w-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-primary"><Mail className="h-5 w-5" /></div>
-                                      <div className="flex flex-col"><span className="text-[9px] font-black text-slate-400 uppercase">Master Mail</span><span className="text-sm font-black text-slate-900">{selectedApp.email_address}</span></div>
+                                      <div className="flex flex-col"><span className="text-[9px] font-black text-slate-400 uppercase">Personal Email</span><span className="text-sm font-black text-slate-900">{selectedApp.email_address}</span></div>
                                    </div>
                                    <div className="p-5 bg-slate-100/50 rounded-2xl flex items-center gap-5 transition-all hover:bg-slate-100">
                                       <div className="h-10 w-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-emerald-500"><Phone className="h-5 w-5" /></div>
-                                      <div className="flex flex-col"><span className="text-[9px] font-black text-slate-400 uppercase">Mobile Comm</span><span className="text-sm font-black text-slate-900">{selectedApp.mobile_number}</span></div>
+                                      <div className="flex flex-col"><span className="text-[9px] font-black text-slate-400 uppercase">Mobile Number</span><span className="text-sm font-black text-slate-900">{selectedApp.mobile_number}</span></div>
                                    </div>
                                 </div>
                              </div>
@@ -796,19 +801,19 @@ export default function ApplicationManagement() {
                         <TabsContent value="academic" className="m-0 space-y-12 animate-in fade-in slide-in-from-bottom-2">
                            <div className="grid grid-cols-4 gap-4">
                               {[
-                                { l: "Secondary Percentage", v: selectedApp.tenth_percentage, c: "primary" },
-                                { l: "Hr. Secondary Percentage", v: selectedApp.twelfth_percentage, c: "emerald" },
-                                { l: "Regulation ID", v: selectedApp.regulations, c: "amber" },
-                                { l: "Arrear Incidents", v: selectedApp.current_backlogs, c: "rose" }
+                                { l: "10th Marks %", v: selectedApp.percentage_10th, c: "primary" },
+                                { l: "12th Marks %", v: selectedApp.percentage_12th, c: "emerald" },
+                                { l: "Regulation", v: selectedApp.regulations, c: "amber" },
+                                { l: "Total Backlogs", v: selectedApp.current_backlogs, c: "rose" }
                               ].map((item, i) => (
                                 <div key={i} className={`p-6 bg-white border rounded-3xl shadow-sm hover:translate-y-[-4px] transition-all`}>
                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-2 leading-tight">{item.l}</p>
-                                   <p className={`text-3xl font-black tracking-tighter ${item.c === 'rose' && parseFloat(item.v) > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{item.v || "0"}{item.l.includes('Percentage') ? '%' : ''}</p>
+                                   <p className={`text-3xl font-black tracking-tighter ${item.c === 'rose' && parseFloat(item.v) > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{item.v || "0"}{item.l.includes('%') ? '%' : ''}</p>
                                 </div>
                               ))}
                            </div>
                            <div className="space-y-6">
-                              <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em]">Semester Performance Matrix</h4>
+                              <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em]">Semester Performance</h4>
                               <div className="grid grid-cols-4 gap-6">
                                 {[1,2,3,4,5,6,7,8].map(i => (
                                   <div key={i} className="flex flex-col items-center bg-slate-50 p-5 rounded-3xl border border-transparent hover:border-slate-200 transition-all group">
@@ -823,10 +828,10 @@ export default function ApplicationManagement() {
                         <TabsContent value="professional" className="m-0 animate-in fade-in slide-in-from-bottom-2">
                            <div className="grid grid-cols-2 gap-12">
                               <div className="space-y-8">
-                                 <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em]">Technology Stack</h4>
+                                 <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em]">Skills & Tools</h4>
                                  <div className="space-y-8">
                                     <div className="space-y-4">
-                                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Programming Dialects</span>
+                                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Programming Languages</span>
                                        <div className="flex flex-wrap gap-2">
                                           {selectedApp.programming_languages?.split(',').map((p: string) => (
                                             <Badge key={p} variant="secondary" className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-tighter hover:bg-primary transition-colors">{p.trim()}</Badge>
@@ -834,28 +839,124 @@ export default function ApplicationManagement() {
                                        </div>
                                     </div>
                                     <div className="space-y-4">
-                                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">IT Capabilities</span>
-                                       <div className="p-6 bg-slate-50 rounded-3xl border border-dashed border-slate-300 text-xs font-bold leading-relaxed">{selectedApp.it_skills || "No records detected."}</div>
+                                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">IT Skills</span>
+                                       <div className="p-6 bg-slate-50 rounded-3xl border border-dashed border-slate-300 text-xs font-bold leading-relaxed">{selectedApp.it_skills || "No records."}</div>
                                     </div>
                                  </div>
                               </div>
                               <div className="space-y-8">
-                                 <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em]">External Profiles</h4>
+                                 <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em]">Professional Profiles</h4>
                                  <div className="space-y-3">
                                     {[
-                                      { l: "LinkedIn Corporate Profile", v: selectedApp.linkedin_url, i: <User className="h-4 w-4" /> },
-                                      { l: "GitHub Code Repository", v: selectedApp.github_url, i: <Activity className="h-4 w-4" /> },
-                                      { l: "LeetCode Competitive Intel", v: selectedApp.leetcode_url, i: <TrendingUp className="h-4 w-4" /> }
+                                      { l: "LinkedIn Profile", v: selectedApp.linkedin_url, i: <User className="h-4 w-4" /> },
+                                      { l: "GitHub Repository", v: selectedApp.github_url, i: <Activity className="h-4 w-4" /> },
+                                      { l: "LeetCode Profile", v: selectedApp.leetcode_url, i: <TrendingUp className="h-4 w-4" /> }
                                     ].map((link, i) => (
                                       link.v && (
                                         <Button key={i} variant="outline" className="w-full h-16 rounded-2xl justify-start px-6 gap-5 bg-slate-50 border-slate-200 hover:bg-white hover:border-primary group transition-all" onClick={() => window.open(link.v, '_blank')}>
                                           <div className="h-10 w-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-400 group-hover:text-primary transition-all">{link.i}</div>
-                                          <div className="flex flex-col items-start translate-x-2"><span className="text-[9px] font-black text-slate-400 uppercase group-hover:text-primary transition-all">ACCES PROTOCOL: {link.l.split(' ')[0]}</span><span className="text-xs font-black text-slate-900">{link.l}</span></div>
+                                          <div className="flex flex-col items-start translate-x-2"><span className="text-[9px] font-black text-slate-400 uppercase group-hover:text-primary transition-all">LINK: {link.l.split(' ')[0]}</span><span className="text-xs font-black text-slate-900">{link.l}</span></div>
                                           <ChevronRight className="ml-auto h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" />
                                         </Button>
                                       )
                                     ))}
                                  </div>
+                              </div>
+                           </div>
+                        </TabsContent>
+
+                        <TabsContent value="family" className="m-0 space-y-12 animate-in fade-in slide-in-from-bottom-2">
+                           <div className="grid grid-cols-2 gap-12">
+                              {/* Father's Details */}
+                              <div className="space-y-8 p-8 bg-slate-50/50 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group">
+                                 <div className="absolute -right-8 -top-8 h-32 w-32 bg-primary/5 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+                                 <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] relative">Paternal Record</h4>
+                                 <div className="space-y-6 relative">
+                                    <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                                       <span className="text-xs text-slate-400 font-bold uppercase">Name</span>
+                                       <span className="font-black text-slate-900">{selectedApp.father_name || "N/A"}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                                       <span className="text-xs text-slate-400 font-bold uppercase">Occupation</span>
+                                       <span className="font-black text-slate-900">{selectedApp.father_occupation || "N/A"}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                                       <span className="text-xs text-slate-400 font-bold uppercase">Contact Number</span>
+                                       <span className="font-black text-slate-900">{selectedApp.father_mobile || "N/A"}</span>
+                                    </div>
+                                 </div>
+                              </div>
+
+                              {/* Mother's Details */}
+                              <div className="space-y-8 p-8 bg-slate-50/50 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group">
+                                 <div className="absolute -right-8 -top-8 h-32 w-32 bg-rose-500/5 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+                                 <h4 className="text-[10px] font-black uppercase text-rose-500 tracking-[0.2em] relative">Maternal Record</h4>
+                                 <div className="space-y-6 relative">
+                                    <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                                       <span className="text-xs text-slate-400 font-bold uppercase">Name</span>
+                                       <span className="font-black text-slate-900">{selectedApp.mother_name || "N/A"}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                                       <span className="text-xs text-slate-400 font-bold uppercase">Contact Number</span>
+                                       <span className="font-black text-slate-900">{selectedApp.mother_mobile || "N/A"}</span>
+                                    </div>
+                                    <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                                       <span className="text-[9px] font-black text-emerald-700 uppercase">Parent Background</span>
+                                       <Badge className={`font-black text-[9px] ${selectedApp.is_parent_farmer ? 'bg-emerald-600' : 'bg-slate-400'} text-white border-none`}>
+                                          {selectedApp.is_parent_farmer ? 'FARMER' : 'OTHER'}
+                                       </Badge>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+
+                           <div className="space-y-8">
+                              <div className="flex items-center gap-6">
+                                 <div className="h-10 w-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
+                                    <Sparkles className="h-5 w-5" />
+                                 </div>
+                                 <div className="flex-1">
+                                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-1">Classification Matrix</h4>
+                                    <h3 className="text-xl font-black text-slate-900 uppercase">Social & Financial Status Indicators</h3>
+                                 </div>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-8">
+                                 {[
+                                    { k: "first_graduate", l: "First Graduate", i: <GraduationCap className="h-6 w-6" />, c: "indigo" },
+                                    { k: "single_parent", l: "Single Parent", i: <Users className="h-6 w-6" />, c: "rose" },
+                                    { k: "ex_serviceman_child", l: "Ex-Serviceman Child", i: <ShieldCheck className="h-6 w-6" />, c: "amber" },
+                                 ].map((item, i) => {
+                                    const isActive = selectedApp[item.k] === "YES" || selectedApp[item.k] === true;
+                                    return (
+                                       <div key={i} className={`group relative p-8 rounded-[32px] border-2 transition-all duration-500 overflow-hidden ${isActive ? `border-${item.c}-500/20 bg-white shadow-2xl shadow-${item.c}-500/10` : 'border-slate-100 bg-slate-50/50 grayscale opacity-40 hover:opacity-100 hover:grayscale-0'}`}>
+                                          <div className={`absolute top-0 right-0 p-4 transition-transform group-hover:rotate-12 ${isActive ? `text-${item.c}-500` : 'text-slate-300'}`}>
+                                             {item.i}
+                                          </div>
+                                          
+                                          <div className="flex flex-col h-full justify-between gap-12">
+                                             <div className="space-y-2">
+                                                <span className={`text-[9px] font-black uppercase tracking-widest ${isActive ? `text-${item.c}-500` : 'text-slate-400'}`}>IDENTIFIER</span>
+                                                <h5 className="text-sm font-black text-slate-900 uppercase leading-none">{item.l}</h5>
+                                             </div>
+
+                                             <div className="flex items-center gap-3">
+                                                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner transition-colors ${isActive ? `bg-${item.c}-100 text-${item.c}-600` : 'bg-slate-200 text-slate-400'}`}>
+                                                   {isActive ? <CheckCircle2 className="h-6 w-6" /> : <XCircle className="h-6 w-6" />}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                   <span className="text-[10px] font-black text-slate-900 uppercase">{isActive ? 'Verified' : 'Not Applicable'}</span>
+                                                   <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">{isActive ? 'Documentation Active' : 'No Record Found'}</span>
+                                                </div>
+                                             </div>
+                                          </div>
+                                          
+                                          {isActive && (
+                                             <div className={`absolute -bottom-1 -right-1 h-20 w-20 bg-${item.c}-500/5 rounded-full blur-2xl`}></div>
+                                          )}
+                                       </div>
+                                    );
+                                 })}
                               </div>
                            </div>
                         </TabsContent>
@@ -866,14 +967,14 @@ export default function ApplicationManagement() {
                                  <Building2 className="h-96 w-96" />
                               </div>
                               <div className="text-center space-y-2 z-10">
-                                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/80">Command Overrides</p>
-                                 <h4 className="text-3xl font-black text-white px-20">Terminate or Advance Candidacy Protocals</h4>
+                                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/80">Application Actions</p>
+                                 <h4 className="text-3xl font-black text-white px-20">Manage Student Application Status</h4>
                               </div>
                               <div className="grid grid-cols-2 gap-4 w-full max-w-2xl px-10 z-10 font-black">
-                                <Button className="h-20 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 text-sm font-black uppercase gap-3 rounded-2xl transition-all active:scale-95" onClick={() => updateStatus(selectedApp.application_id || selectedApp.id, "shortlisted")} disabled={!!isProcessing}><Activity className="h-6 w-6" /> Shortlist Entity</Button>
-                                <Button className="h-20 bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-500/20 text-sm font-black uppercase gap-3 rounded-2xl transition-all active:scale-95" onClick={() => setIsInterviewDialogOpen(true)} disabled={!!isProcessing}><Calendar className="h-6 w-6" /> Deploy Interview</Button>
-                                <Button className="h-20 bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 text-sm font-black uppercase gap-3 rounded-2xl transition-all active:scale-95" onClick={() => updateStatus(selectedApp.application_id || selectedApp.id, "selected")} disabled={!!isProcessing}><Award className="h-6 w-6" /> Execute Placement</Button>
-                                <Button variant="destructive" className="h-20 shadow-lg shadow-rose-500/20 text-sm font-black uppercase gap-3 rounded-2xl transition-all active:scale-95" onClick={() => updateStatus(selectedApp.application_id || selectedApp.id, "rejected_by_tpo")} disabled={!!isProcessing}><XCircle className="h-6 w-6" /> Final Neutralization</Button>
+                                <Button className="h-20 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 text-sm font-black uppercase gap-3 rounded-2xl transition-all active:scale-95" onClick={() => updateStatus(selectedApp.application_id || selectedApp.id, "shortlisted")} disabled={!!isProcessing}><Activity className="h-6 w-6" /> Shortlist Student</Button>
+                                <Button className="h-20 bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-500/20 text-sm font-black uppercase gap-3 rounded-2xl transition-all active:scale-95" onClick={() => setIsInterviewDialogOpen(true)} disabled={!!isProcessing}><Calendar className="h-6 w-6" /> Schedule Interview</Button>
+                                <Button className="h-20 bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 text-sm font-black uppercase gap-3 rounded-2xl transition-all active:scale-95" onClick={() => updateStatus(selectedApp.application_id || selectedApp.id, "selected")} disabled={!!isProcessing}><Award className="h-6 w-6" /> Mark as Placed</Button>
+                                <Button variant="destructive" className="h-20 shadow-lg shadow-rose-500/20 text-sm font-black uppercase gap-3 rounded-2xl transition-all active:scale-95" onClick={() => updateStatus(selectedApp.application_id || selectedApp.id, "rejected_by_tpo")} disabled={!!isProcessing}><XCircle className="h-6 w-6" /> Reject Applicant</Button>
                               </div>
                            </div>
                         </TabsContent>

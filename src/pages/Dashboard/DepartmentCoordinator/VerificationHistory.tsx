@@ -48,22 +48,24 @@ export default function VerificationHistory() {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   
-  // Custom Export States
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
-    STUDENT_COLUMNS.map(c => c.key)
+  // Table Customization States
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(
+    STUDENT_COLUMNS.slice(0, 15).map(c => c.key) // Default to first 15 for performance/cleanliness
   );
-  const [columnSearchTerm, setColumnSearchTerm] = useState("");
-  const [searchColumn, setSearchColumn] = useState<string>("all");
+  const [isModifyTableOpen, setIsModifyTableOpen] = useState(false);
+  
+  // Precise Filtering States
+  const [filterField, setFilterField] = useState<string>("all");
+  const [filterValue, setFilterValue] = useState("");
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
-  const toggleColumn = (key: string) => {
-    setSelectedExportColumns(prev => 
+  // Multi-column search/filter result
+
+  const toggleVisibleColumn = (key: string) => {
+    setVisibleColumns(prev => 
       prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
     );
   };
-
-  const selectAllCols = () => setSelectedExportColumns(STUDENT_COLUMNS.map(c => c.key));
-  const deselectAllCols = () => setSelectedExportColumns([]);
 
   async function fetchHistory() {
     if (!departmentId) return;
@@ -88,21 +90,31 @@ export default function VerificationHistory() {
     fetchHistory();
   }, [departmentId]);
 
-  const filteredStudents = students.filter(s => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    
-    if (searchColumn === "all") {
-      // Universal search across completely all fields
-      return Object.values(s).some(val => 
-        val && String(val).toLowerCase().includes(term)
-      );
-    } else {
-      // Targeted search over a specific column
-      const val = s[searchColumn];
-      return val && String(val).toLowerCase().includes(term);
-    }
-  });
+  const filteredStudents = students
+    .filter(s => {
+      // 1. Precise Filtering (Targeted field) - ONLY if field is selected
+      if (filterField !== "all" && filterValue) {
+        const val = s[filterField];
+        if (!val || !String(val).toLowerCase().includes(filterValue.toLowerCase())) return false;
+      }
+      
+      // 2. Universal Search (Any field) - ONLY if search term exists
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const matchesSearch = Object.values(s).some(val => 
+          val && String(val).toLowerCase().includes(term)
+        );
+        if (!matchesSearch) return false;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.updated_at).getTime();
+      const dateB = new Date(b.updated_at).getTime();
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+
 
   const exportToExcel = () => {
     if (filteredStudents.length === 0) {
@@ -110,10 +122,8 @@ export default function VerificationHistory() {
       return;
     }
 
-    const columnsToExport = STUDENT_COLUMNS.filter(col => selectedExportColumns.includes(col.key));
-    
-    if (columnsToExport.length === 0) {
-      toast.error("Please select at least one data column to export.");
+    if (visibleColumns.length === 0) {
+      toast.error("Please select at least one column to export");
       return;
     }
 
@@ -121,81 +131,109 @@ export default function VerificationHistory() {
     const exportData = filteredStudents.map(student => {
       const row: any = {};
       
-      // Always include base identifiable fields first
-      row["Record Status"] = student.approval_status === "approved_by_tpo" ? "TPO Verified" :
-                             student.approval_status === "approved_by_hod" ? "HOD Approved" :
-                             "Rejected";
-      row["Student Name"] = `${student.first_name} ${student.last_name || ''}`.trim();
-      row["Registration No."] = student.reg_no;
+      // Always include these core identification fields as they are "frozen" in the UI
+      row["Status"] = student.approval_status?.replace(/_/g, ' ').toUpperCase() || "";
+      row["Student Name"] = `${student.first_name} ${student.last_name || ''}`;
+      row["Reg No"] = student.reg_no;
 
-      columnsToExport.forEach(col => {
-        row[col.label] = student[col.key] || "";
+      // Include selected dynamic columns
+      STUDENT_COLUMNS.forEach(col => {
+        if (visibleColumns.includes(col.key)) {
+          row[col.label] = student[col.key] || "";
+        }
       });
       return row;
     });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws, "Verification History");
-    XLSX.writeFile(wb, "HOD_Verification_History.xlsx");
-    setIsExportDialogOpen(false);
+    XLSX.utils.book_append_sheet(wb, ws, "Master Database");
+    XLSX.writeFile(wb, `Student_Master_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success("Data exported successfully with selected columns.");
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Verification History</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Student Data Base</h1>
         <p className="text-muted-foreground">
-          View all past verification actions for your department.
+          Comprehensive repository of all verified and archived student records.
         </p>
       </div>
 
-      {/* Massive Universal Search & Export Toolbar */}
-      <div className="bg-primary/5 p-4 md:p-6 rounded-2xl border border-primary/10 shadow-sm space-y-4">
-        
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="w-full md:w-72 shrink-0">
-            <Select value={searchColumn} onValueChange={setSearchColumn}>
-              <SelectTrigger className="h-14 bg-background border-primary/20 shadow-inner rounded-xl font-medium">
-                <SelectValue placeholder="Select Target Field..." />
+      {/* EXECUTIVE COMMAND BAR */}
+      <div className="bg-white rounded-2xl border shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+        <div className="p-4 border-b bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-4">
+          <Button 
+            onClick={exportToExcel}
+            className="h-10 px-6 bg-emerald-600 text-white hover:bg-emerald-700 shadow-md gap-2 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+          >
+            <Download className="h-4 w-4" />
+            Save (Download)
+          </Button>
+           
+          <div className="flex items-center gap-3">
+            <Select value={sortOrder} onValueChange={(v: any) => setSortOrder(v)}>
+              <SelectTrigger className="h-10 w-44 bg-white font-semibold text-xs border-slate-200">
+                <SelectValue placeholder="Sort Order" />
               </SelectTrigger>
-              <SelectContent className="max-h-80">
-                <SelectItem value="all" className="font-bold text-primary">Scan All 75 Fields Natively</SelectItem>
-                {STUDENT_COLUMNS.map(col => (
-                  <SelectItem key={col.key} value={col.key}>{col.label}</SelectItem>
-                ))}
+              <SelectContent>
+                <SelectItem value="newest">Latest Submissions</SelectItem>
+                <SelectItem value="oldest">Oldest Records</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="relative w-full">
-            <Search className="absolute left-4 top-4 h-5 w-5 text-primary/60" />
-            <Input
-              placeholder={searchColumn === 'all' 
-                ? "Deep Search: Type a city, name, caste, blood group..." 
-                : `Targeted Search: Type exact value for ${STUDENT_COLUMNS.find(c => c.key === searchColumn)?.label || 'selected field'}...`
-              }
-              className="pl-12 h-14 text-base md:text-lg bg-background shadow-inner border-primary/20 font-semibold rounded-xl"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <Button 
+              variant="outline" 
+              onClick={() => setIsModifyTableOpen(true)}
+              className="h-10 px-4 border-slate-200 bg-white shadow-sm gap-2 text-xs font-bold uppercase"
+            >
+              <Filter className="h-3 w-3" /> Modify Table
+            </Button>
           </div>
         </div>
-        
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-          <div className="text-sm font-semibold text-primary">
-            <Badge variant="secondary" className="mr-2 text-sm px-2 py-0.5">{filteredStudents.length}</Badge> 
-            Records Matching Filter
-          </div>
-          
-          <Button onClick={() => setIsExportDialogOpen(true)} className="w-full sm:w-auto h-11 px-6 shadow-md gap-2 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all">
-            <Filter className="h-4 w-4" /> Selected Filter Results: Export Columns to Excel
-          </Button>
+
+        <div className="p-6 bg-white space-y-4">
+           {/* Omni-Search Engine */}
+           <div className="flex flex-col md:flex-row gap-3">
+              <div className="w-full md:w-64 shrink-0">
+                 <Select value={filterField} onValueChange={setFilterField}>
+                   <SelectTrigger className="h-12 bg-slate-50/50 border-slate-200 font-bold text-xs uppercase tracking-widest px-4">
+                     <div className="flex items-center gap-2">
+                        <span className="text-slate-400">Filter:</span>
+                        <SelectValue placeholder="All Fields" />
+                     </div>
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="all">Global Master Search</SelectItem>
+                     {STUDENT_COLUMNS.map(c => <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>)}
+                   </SelectContent>
+                 </Select>
+              </div>
+
+              <div className="relative flex-1">
+                 <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+                 <Input 
+                   placeholder={filterField === "all" ? "Search across 100+ master fields..." : `Type to filter by ${STUDENT_COLUMNS.find(c => c.key === filterField)?.label}...`}
+                   value={filterField === "all" ? searchTerm : filterValue}
+                   onChange={(e) => filterField === "all" ? setSearchTerm(e.target.value) : setFilterValue(e.target.value)}
+                   className="pl-12 h-12 text-base bg-slate-50/50 border-slate-200 focus-visible:ring-slate-900 rounded-xl font-medium placeholder:text-slate-400"
+                 />
+                 {(searchTerm || filterValue) && (
+                   <Button 
+                     variant="ghost" 
+                     className="absolute right-2 top-2 h-8 px-2 text-[10px] font-black uppercase text-slate-400 hover:text-slate-900"
+                     onClick={() => {setSearchTerm(""); setFilterValue("");}}
+                   >
+                     Clear Filter
+                   </Button>
+                 )}
+              </div>
+           </div>
         </div>
       </div>
 
       <Card className="border-0 shadow-premium overflow-hidden">
         <CardHeader className="bg-primary/5 border-b">
-          <CardTitle>Archived Records ({filteredStudents.length})</CardTitle>
+          <CardTitle>Master Records ({filteredStudents.length})</CardTitle>
           <CardDescription>
             Comprehensive grid of all historical approvals and rejections.
           </CardDescription>
@@ -212,31 +250,35 @@ export default function VerificationHistory() {
               </div>
             ) : (
               <div className="w-max min-w-full">
-                <Table className="whitespace-nowrap">
+                <Table className="whitespace-nowrap border-separate border-spacing-0 border-l border-t border-slate-200">
                   <TableHeader className="bg-muted/50 sticky top-0 z-20">
                     <TableRow className="border-b shadow-sm">
                       {/* Frozen Actions */}
-                      <TableHead className="w-[80px] text-center font-black uppercase text-[10px] tracking-wider sticky left-0 z-30 bg-muted/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                      <TableHead className="min-w-[60px] w-[60px] text-center font-black uppercase text-[10px] tracking-wider sticky left-0 z-30 bg-muted/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-b border-slate-300">
                         Actions
                       </TableHead>
                       {/* Frozen Status */}
-                      <TableHead className="w-[120px] text-center font-black uppercase text-[10px] tracking-wider sticky left-[80px] z-30 bg-muted/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                      <TableHead className="min-w-[110px] w-[110px] text-center font-black uppercase text-[10px] tracking-wider sticky left-[60px] z-30 bg-muted/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-b border-slate-300">
                         Status
                       </TableHead>
                       {/* Frozen Name */}
-                      <TableHead className="w-[200px] text-left font-black uppercase text-[10px] tracking-wider sticky left-[200px] z-30 bg-muted/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                      <TableHead className="min-w-[180px] w-[180px] text-left font-black uppercase text-[10px] tracking-wider sticky left-[170px] z-30 bg-muted/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-b border-slate-300">
                         Student Name
                       </TableHead>
                       {/* Frozen Reg No */}
-                      <TableHead className="w-[150px] text-left font-black uppercase text-[10px] tracking-wider sticky left-[400px] z-30 bg-muted/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                      <TableHead className="min-w-[140px] w-[140px] text-left font-black uppercase text-[10px] tracking-wider sticky left-[350px] z-30 bg-muted/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-b border-slate-300">
                         Reg No
+                      </TableHead>
+                      {/* Frozen Placement Interest */}
+                      <TableHead className="min-w-[110px] w-[110px] text-center font-black uppercase text-[10px] tracking-wider sticky left-[490px] z-30 bg-muted/95 backdrop-blur shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-b border-slate-300">
+                        Interest
                       </TableHead>
                       
                       {/* Dynamic Columns */}
-                      {STUDENT_COLUMNS.map((col) => (
+                      {STUDENT_COLUMNS.filter(col => visibleColumns.includes(col.key) && col.key !== 'interested_in_placement').map((col) => (
                         <TableHead 
                           key={col.key} 
-                          className="min-w-[140px] px-4 font-black uppercase text-[10px] tracking-wider text-muted-foreground"
+                          className="min-w-[140px] px-4 font-black uppercase text-[10px] tracking-wider text-muted-foreground border-r border-b border-slate-300"
                         >
                           {col.label}
                         </TableHead>
@@ -250,7 +292,7 @@ export default function VerificationHistory() {
                         className="hover:bg-muted/30 transition-colors border-b last:border-0 group"
                       >
                         {/* Frozen Actions Cell */}
-                        <TableCell className="text-center sticky left-0 z-10 bg-background group-hover:bg-muted/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] p-2">
+                        <TableCell className="text-center sticky left-0 z-10 bg-background group-hover:bg-muted/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] p-2 w-[60px] border-r border-b border-slate-200">
                           <Button 
                             variant="ghost" 
                             size="sm"
@@ -265,7 +307,7 @@ export default function VerificationHistory() {
                         </TableCell>
 
                         {/* Frozen Status */}
-                        <TableCell className="text-center sticky left-[80px] z-10 bg-background group-hover:bg-muted/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] p-2">
+                        <TableCell className="text-center sticky left-[60px] z-10 bg-background group-hover:bg-muted/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] p-2 w-[110px] border-r border-b border-slate-200">
                           <Badge 
                             className="text-[9px] font-bold px-1.5 h-4 w-full justify-center"
                             variant={
@@ -281,23 +323,38 @@ export default function VerificationHistory() {
                         </TableCell>
 
                         {/* Frozen Name Cell */}
-                        <TableCell className="font-bold py-3 px-4 text-foreground sticky left-[200px] z-10 bg-background group-hover:bg-muted/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] truncate max-w-[200px]" title={`${student.first_name} ${student.last_name || ''}`}>
+                        <TableCell className="font-bold py-3 px-4 text-foreground sticky left-[170px] z-10 bg-background group-hover:bg-muted/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] truncate max-w-[180px] w-[180px] border-r border-b border-slate-200" title={`${student.first_name} ${student.last_name || ''}`}>
                           {student.first_name} {student.last_name}
                         </TableCell>
 
                         {/* Frozen Reg No Cell */}
-                        <TableCell className="font-mono text-xs px-4 text-muted-foreground sticky left-[400px] z-10 bg-background group-hover:bg-muted/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] truncate max-w-[150px]">
+                        <TableCell className="font-mono text-xs px-4 text-muted-foreground sticky left-[350px] z-10 bg-background group-hover:bg-muted/50 shadow-[2px_0_5px_-1px_rgba(0,0,0,0.05)] truncate max-w-[140px] w-[140px] border-r border-b border-slate-200">
                           {student.reg_no}
                         </TableCell>
 
+                        {/* Frozen Placement Interest Cell */}
+                        <TableCell className="text-center sticky left-[490px] z-10 bg-background group-hover:bg-muted/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] p-2 w-[110px] border-r border-b border-slate-200">
+                          <Badge 
+                            variant="outline"
+                            className={cn(
+                              "text-[8px] font-black uppercase tracking-widest px-2",
+                              student.interested_in_placement?.toLowerCase() === 'yes' 
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                                : "bg-rose-50 text-rose-600 border-rose-200"
+                            )}
+                          >
+                            {student.interested_in_placement || "N/A"}
+                          </Badge>
+                        </TableCell>
+
                         {/* Dynamic Data Cells */}
-                        {STUDENT_COLUMNS.map((col) => {
+                        {STUDENT_COLUMNS.filter(col => visibleColumns.includes(col.key) && col.key !== 'interested_in_placement').map((col) => {
                           const val = student[col.key];
                           return (
                             <TableCell 
                               key={col.key} 
                               className={cn(
-                                "px-4 py-3 text-xs truncate max-w-[200px]",
+                                "px-4 py-3 text-xs truncate max-w-[200px] border-r border-b border-slate-200",
                                 !val ? "text-muted-foreground/30 italic" : "text-muted-foreground"
                               )}
                               title={String(val || "N/A")}
@@ -376,54 +433,59 @@ export default function VerificationHistory() {
         </DialogContent>
       </Dialog>
 
-      {/* CUSTOM CSV EXPORT DIALOG */}
-      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+      {/* MODIFY TABLE DIALOG */}
+      <Dialog open={isModifyTableOpen} onOpenChange={setIsModifyTableOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 border-primary/20 shadow-2xl overflow-hidden">
           <DialogHeader className="px-6 py-4 border-b bg-muted/40 shrink-0">
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Download className="h-5 w-5 text-primary" />
-              Advanced Data Export
+              <Filter className="h-5 w-5 text-primary" />
+              Modify Table Display
             </DialogTitle>
             <DialogDescription>
-              Select specifically which profile columns you want to include in your Excel file. (Student Name, Reg No, and Status are always included automatically).
+              Select which columns should be visible in your live Master Database view.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-6 py-3 border-b bg-primary/5 shadow-inner shrink-0 gap-3">
             <div className="text-sm font-semibold text-primary shrink-0">
-              <Badge variant="secondary" className="mr-2">{selectedExportColumns.length}</Badge> 
-              of {STUDENT_COLUMNS.length} Columns Selected
+              <Badge variant="secondary" className="mr-2">{visibleColumns.length}</Badge> 
+              of {STUDENT_COLUMNS.length} Columns Visible
             </div>
             
             <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-              <div className="relative w-full sm:w-56">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="Search columns to export..."
-                  className="pl-8 h-8 text-xs bg-background shadow-sm"
-                  value={columnSearchTerm}
-                  onChange={(e) => setColumnSearchTerm(e.target.value)}
-                />
-              </div>
               <div className="flex gap-2 shrink-0">
-                <Button size="sm" variant="outline" onClick={selectAllCols} className="h-8 shadow-sm">Select All</Button>
-                <Button size="sm" variant="outline" onClick={deselectAllCols} className="h-8 shadow-sm">Clear All</Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => setVisibleColumns(STUDENT_COLUMNS.map(c => c.key))} 
+                  className="h-8 shadow-sm"
+                >
+                  Select All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => setVisibleColumns([])} 
+                  className="h-8 shadow-sm"
+                >
+                  Clear All
+                </Button>
               </div>
             </div>
           </div>
 
           <div className="overflow-y-auto p-6 flex-1 bg-muted/5 min-h-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {STUDENT_COLUMNS.filter(c => c.label.toLowerCase().includes(columnSearchTerm.toLowerCase())).map(col => (
+              {STUDENT_COLUMNS.map(col => (
                 <Label 
                   key={col.key} 
-                  htmlFor={`export-${col.key}`}
+                  htmlFor={`visible-${col.key}`}
                   className="flex items-start space-x-3 bg-background p-3 rounded-lg border shadow-sm hover:border-primary/40 hover:bg-muted/20 transition-all cursor-pointer group"
                 >
                   <Checkbox 
-                    id={`export-${col.key}`} 
-                    checked={selectedExportColumns.includes(col.key)}
-                    onCheckedChange={() => toggleColumn(col.key)}
+                    id={`visible-${col.key}`} 
+                    checked={visibleColumns.includes(col.key)}
+                    onCheckedChange={() => toggleVisibleColumn(col.key)}
                     className="mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                   />
                   <div className="grid gap-1.5 leading-none">
@@ -436,10 +498,19 @@ export default function VerificationHistory() {
             </div>
           </div>
 
-          <div className="p-4 border-t bg-muted/20 flex justify-end gap-3 shrink-0">
-            <Button variant="ghost" onClick={() => setIsExportDialogOpen(false)}>Cancel</Button>
-            <Button onClick={exportToExcel} className="gap-2 shadow-md">
-              <Download className="h-4 w-4" /> Download Custom Excel
+          <div className="p-4 border-t bg-muted/20 flex flex-col sm:flex-row justify-end gap-3 shrink-0">
+            <Button 
+              variant="outline"
+              className="gap-2 shadow-sm w-full sm:w-auto border-emerald-600 text-emerald-600 hover:bg-emerald-50" 
+              onClick={() => {
+                exportToExcel();
+              }}
+            >
+              <Download className="h-4 w-4" />
+              Download Selected Data
+            </Button>
+            <Button className="gap-2 shadow-md w-full sm:w-auto bg-slate-900" onClick={() => setIsModifyTableOpen(false)}>
+              Apply Table Configuration
             </Button>
           </div>
         </DialogContent>

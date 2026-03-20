@@ -208,6 +208,20 @@ export type Database = {
           visit_date: string
           visit_mode: Database["public"]["Enums"]["visit_mode"]
           visit_time: string | null
+          min_cgpa: number | null
+          max_backlogs: number | null
+          min_10th_mark: number | null
+          min_12th_mark: number | null
+          job_description: string | null
+          work_location: string | null
+          bond_details: string | null
+          application_deadline: string | null
+          company_website: string | null
+          company_linkedin: string | null
+          other_links: string | null
+          max_history_arrears: number | null
+          status: string | null
+          eligible_batches: string | null
         }
         Insert: {
           academic_year_id: string
@@ -224,6 +238,20 @@ export type Database = {
           visit_date: string
           visit_mode?: Database["public"]["Enums"]["visit_mode"]
           visit_time?: string | null
+          min_cgpa?: number | null
+          max_backlogs?: number | null
+          min_10th_mark?: number | null
+          min_12th_mark?: number | null
+          job_description?: string | null
+          work_location?: string | null
+          bond_details?: string | null
+          application_deadline?: string | null
+          company_website?: string | null
+          company_linkedin?: string | null
+          other_links?: string | null
+          max_history_arrears?: number | null
+          status?: string | null
+          eligible_batches?: string | null
         }
         Update: {
           academic_year_id?: string
@@ -240,6 +268,20 @@ export type Database = {
           visit_date?: string
           visit_mode?: Database["public"]["Enums"]["visit_mode"]
           visit_time?: string | null
+          min_cgpa?: number | null
+          max_backlogs?: number | null
+          min_10th_mark?: number | null
+          min_12th_mark?: number | null
+          job_description?: string | null
+          work_location?: string | null
+          bond_details?: string | null
+          application_deadline?: string | null
+          company_website?: string | null
+          company_linkedin?: string | null
+          other_links?: string | null
+          max_history_arrears?: number | null
+          status?: string | null
+          eligible_batches?: string | null
         }
         Relationships: [
           {
@@ -385,10 +427,10 @@ export type Database = {
           passport_number: string | null
           hostel_name: string | null
           profile_status: string | null
-          twelfth_register_number: string | null
-          twelfth_school_name: string | null
-          twelfth_school_address: string | null
-          twelfth_school_board: string | null
+          twelfth_reg_no: string | null
+          school_name_12th: string | null
+          school_address_12th: string | null
+          board_12th: string | null
           is_parent_farmer: string | null
           medium_of_instruction: string | null
           is_physically_challenged: string | null
@@ -429,12 +471,12 @@ export type Database = {
           current_semester: string | null
           is_hosteller: string | null
           is_transport: string | null
-          tenth_mark: string | null
-          tenth_percentage: string | null
-          tenth_school_name: string | null
-          tenth_board: string | null
-          twelfth_mark: string | null
-          twelfth_percentage: string | null
+          mark_10th: string | null
+          percentage_10th: string | null
+          school_name_10th: string | null
+          board_10th: string | null
+          mark_12th: string | null
+          percentage_12th: string | null
           diploma_studied: string | null
           diploma_institute_name: string | null
           diploma_stream: string | null
@@ -497,10 +539,10 @@ export type Database = {
           passport_number?: string | null
           hostel_name?: string | null
           profile_status?: string | null
-          twelfth_register_number?: string | null
-          twelfth_school_name?: string | null
-          twelfth_school_address?: string | null
-          twelfth_school_board?: string | null
+          twelfth_reg_no?: string | null
+          school_name_12th?: string | null
+          school_address_12th?: string | null
+          board_12th?: string | null
           is_parent_farmer?: string | null
           medium_of_instruction?: string | null
           is_physically_challenged?: string | null
@@ -541,12 +583,12 @@ export type Database = {
           current_semester?: string | null
           is_hosteller?: string | null
           is_transport?: string | null
-          tenth_mark?: string | null
-          tenth_percentage?: string | null
-          tenth_school_name?: string | null
-          tenth_board?: string | null
-          twelfth_mark?: string | null
-          twelfth_percentage?: string | null
+          mark_10th?: string | null
+          percentage_10th?: string | null
+          school_name_10th?: string | null
+          board_10th?: string | null
+          mark_12th?: string | null
+          percentage_12th?: string | null
           diploma_studied?: string | null
           diploma_institute_name?: string | null
           diploma_stream?: string | null
@@ -609,10 +651,10 @@ export type Database = {
           passport_number?: string | null
           hostel_name?: string | null
           profile_status?: string | null
-          twelfth_register_number?: string | null
-          twelfth_school_name?: string | null
-          twelfth_school_address?: string | null
-          twelfth_school_board?: string | null
+          twelfth_reg_no?: string | null
+          school_name_12th?: string | null
+          school_address_12th?: string | null
+          board_12th?: string | null
           is_parent_farmer?: string | null
           medium_of_instruction?: string | null
           is_physically_challenged?: string | null
@@ -653,12 +695,12 @@ export type Database = {
           current_semester?: string | null
           is_hosteller?: string | null
           is_transport?: string | null
-          tenth_mark?: string | null
-          tenth_percentage?: string | null
-          tenth_school_name?: string | null
-          tenth_board?: string | null
-          twelfth_mark?: string | null
-          twelfth_percentage?: string | null
+          mark_10th?: string | null
+          percentage_10th?: string | null
+          school_name_10th?: string | null
+          board_10th?: string | null
+          mark_12th?: string | null
+          percentage_12th?: string | null
           diploma_studied?: string | null
           diploma_institute_name?: string | null
           diploma_stream?: string | null
@@ -756,6 +798,21 @@ export type Database = {
       }
       is_management: { Args: { _user_id: string }; Returns: boolean }
       is_placement_officer: { Args: { _user_id: string }; Returns: boolean }
+      safe_apply_for_drive: {
+        Args: {
+          p_drive_id: string
+          p_student_id: string
+          p_resume_url: string | null
+        }
+        Returns: { success: boolean; message: string }
+      }
+      get_application_pool: {
+        Args: {
+          p_drive_id: string | null
+          p_search: string | null
+        }
+        Returns: any[]
+      }
     }
     Enums: {
       app_role: "placement_officer" | "department_coordinator" | "management" | "student"

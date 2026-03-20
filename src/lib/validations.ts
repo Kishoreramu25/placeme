@@ -85,6 +85,10 @@ export const driveSchema = z.object({
   company_website: z.string().trim().nullish().or(z.literal("")),
   company_linkedin: z.string().trim().nullish().or(z.literal("")),
   other_links: z.string().trim().nullish().or(z.literal("")),
+  round_details: z.array(z.object({
+    name: z.string().min(1, "Round name is required"),
+    description: z.string().optional()
+  })).optional().default([]),
 });
 
 export type DriveFormData = z.infer<typeof driveSchema>;
@@ -126,21 +130,22 @@ export const studentMasterSchema = z.object({
   passport_number: z.string().nullish(),
   hostel_name: z.string().nullish(),
   // Academic - Schooling
-  tenth_mark: z.string().nullish(),
-  tenth_percentage: z.string().nullish(),
-  tenth_school_name: z.string().nullish(),
-  tenth_board: z.string().nullish(),
-  twelfth_mark: z.string().nullish(),
-  twelfth_percentage: z.string().nullish(),
-  twelfth_school_board: z.string().nullish(),
-  twelfth_school_name: z.string().nullish(),
-  twelfth_school_address: z.string().nullish(),
-  twelfth_register_number: z.string().nullish(),
+  mark_10th: z.string().nullish(),
+  percentage_10th: z.string().nullish(),
+  school_name_10th: z.string().nullish(),
+  board_10th: z.string().nullish(),
+  mark_12th: z.string().nullish(),
+  percentage_12th: z.string().nullish(),
+  board_12th: z.string().nullish(),
+  school_name_12th: z.string().nullish(),
+  school_address_12th: z.string().nullish(),
+  twelfth_reg_no: z.string().nullish(),
   medium_of_instruction: z.string().nullish(),
   diploma_studied: z.string().nullish(),
   diploma_institute_name: z.string().nullish(),
   diploma_stream: z.string().nullish(),
   work_experience: z.string().nullish(),
+  has_work_experience: z.string().nullish(),
 
   // Academic - College
   current_year: z.string().nullish(),

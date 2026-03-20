@@ -47,7 +47,7 @@ export default function DriveApplications() {
       // Step 2: Get all students in that department
       const { data: students } = await supabase
         .from("students_master")
-        .select("id, first_name, last_name, reg_no, overall_cgpa, tenth_percentage, twelfth_percentage, current_standing_arrear, interested_in_placement")
+        .select("id, first_name, last_name, reg_no, overall_cgpa, percentage_10th, percentage_12th, current_standing_arrear, interested_in_placement")
         .eq("department_id", hodProfile.department_id);
 
       if (!students || students.length === 0) {
@@ -252,7 +252,7 @@ export default function DriveApplications() {
                          </div>
                          <div className="p-3 border border-slate-200 rounded-lg bg-white shadow-sm">
                             <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">10th / 12th Marks (%)</p>
-                            <p className="font-bold text-slate-900">{selectedApp.student?.tenth_percentage}% / {selectedApp.student?.twelfth_percentage}%</p>
+                            <p className="font-bold text-slate-900">{selectedApp.student?.percentage_10th}% / {selectedApp.student?.percentage_12th}%</p>
                          </div>
                       </div>
                     </div>

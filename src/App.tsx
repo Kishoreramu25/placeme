@@ -64,10 +64,8 @@ const App = () => (
               }
             >
               <Route index element={<TPOOverview />} />
-              <Route path="companies" element={<Companies />} />
               <Route path="drives" element={<Drives />} />
               <Route path="students" element={<StudentsMaster />} />
-              <Route path="analytics" element={<Statistics />} />
               <Route path="applications" element={<ApplicationManagement />} />
               <Route path="approvals" element={<TPOApplicationApprovals />} />
               <Route path="placed" element={<PlacedStudents />} />
@@ -86,7 +84,6 @@ const App = () => (
               <Route index element={<StudentApprovals />} />
               <Route path="history" element={<VerificationHistory />} />
               <Route path="applications" element={<DriveApplications />} />
-              <Route path="students" element={<HODManageUsers />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 
@@ -100,7 +97,6 @@ const App = () => (
               }
             >
               <Route index element={<StudentProfile />} />
-              <Route path="profile" element={<StudentProfile />} />
               <Route path="drives" element={<StudentDrives />} />
               <Route path="resources" element={<AppGuide />} />
               <Route path="settings" element={<Settings />} />

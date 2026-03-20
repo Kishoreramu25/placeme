@@ -11,8 +11,12 @@ import { studentMasterSchema, StudentMasterFormData } from "@/lib/validations";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Loader2, Save, Send, AlertCircle, Sparkles } from "lucide-react";
+import { 
+  Loader2, Save, Send, AlertCircle, Sparkles, TrendingUp,
+  CheckCircle2, PartyPopper 
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,13 +27,31 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, PartyPopper } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const INDIA_STATES = [
+  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
+  "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", 
+  "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", 
+  "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", 
+  "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", 
+  "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+];
+
+const TN_DISTRICTS = [
+  "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri", 
+  "Dindigul", "Erode", "Kallakurichi", "Kancheepuram", "Karur", "Krishnagiri", 
+  "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris", "Perambalur", 
+  "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivaganga", "Tenkasi", 
+  "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli", "Tirupathur", 
+  "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore", "Viluppuram", "Virudhunagar"
+];
 
 export default function StudentProfile() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [status, setStatus] = useState<string>("pending_hod");
+  const [status, setStatus] = useState<string | null>(null);
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
@@ -41,9 +63,16 @@ export default function StudentProfile() {
     handleSubmit,
     reset,
     watch,
+    getValues,
     formState: { errors },
   } = useForm<StudentMasterFormData>({
     resolver: zodResolver(studentMasterSchema),
+    shouldUnregister: false,
+    defaultValues: {
+      interested_in_placement: "YES",
+      diploma_studied: "NO",
+      has_work_experience: "NO"
+    }
   });
 
   const currentYear = watch("current_year");
@@ -52,7 +81,10 @@ export default function StudentProfile() {
   const arrearStatus = watch("current_standing_arrear");
   const passportAvailable = watch("passport_available");
   const isHostellerType = watch("is_hosteller");
+  const nationality = watch("nationality");
+  const state = watch("state");
   const interestedInPlacement = watch("interested_in_placement");
+  const hasWorkExperience = watch("has_work_experience");
 
   useEffect(() => {
     async function fetchProfile() {
@@ -85,8 +117,11 @@ export default function StudentProfile() {
         setIsLoading(false);
       }
     }
-    fetchProfile();
-  }, [user, reset]);
+    
+    if (user && isLoading) {
+      fetchProfile();
+    }
+  }, [user, reset, isLoading]);
 
   const fillDemoData = () => {
     const demoData: Partial<StudentMasterFormData> = {
@@ -116,14 +151,16 @@ export default function StudentProfile() {
       caste: "Kongu Vellalar",
 
       // Academic Records
-      tenth_percentage: "95.6%",
-      tenth_mark: "478",
-      tenth_board: "State Board",
-      tenth_school_name: "Government Higher Secondary School, Erode",
-      twelfth_percentage: "92.4%",
-      twelfth_mark: "554",
-      twelfth_school_board: "State Board",
-      twelfth_school_name: "Government Higher Secondary School, Erode",
+      percentage_10th: "95.6%",
+      mark_10th: "478",
+      board_10th: "State Board",
+      school_name_10th: "Government Higher Secondary School, Erode",
+      percentage_12th: "92.4%",
+      mark_12th: "554",
+      board_12th: "State Board",
+      school_name_12th: "Government Higher Secondary School, Erode",
+      school_address_12th: "Erode, Tamil Nadu",
+      twelfth_reg_no: "12345678",
       diploma_studied: "NO",
       diploma_institute_name: "",
       diploma_stream: "",
@@ -204,14 +241,51 @@ export default function StudentProfile() {
     toast.success("Massive Demo Profile populated! 🚀");
   };
 
-  const onActualSubmit = async (data: StudentMasterFormData) => {
-    setIsConfirmOpen(false);
+  const progressValue = Math.round((
+    [
+      watch("first_name"), watch("last_name"), watch("gender"), watch("date_of_birth"), 
+      watch("email_address"), watch("mobile_number"), watch("aadhar_number"),
+      watch("nationality"), watch("state"), watch("district"), watch("religion"),
+      watch("community"), watch("mark_10th"), watch("percentage_10th"), 
+      watch("school_name_10th"), watch("board_10th"), watch("mark_12th"), watch("percentage_12th"), 
+      watch("school_name_12th"), watch("board_12th"), watch("current_year"), watch("current_semester"),
+      watch("reg_no"), watch("roll_number"), watch("degree_branches"), 
+      watch("batches"), watch("regulations"), watch("resume_url"), watch("photo_url"),
+      watch("skills"), watch("programming_languages"), watch("father_guardian_name"),
+      watch("mother_name"), watch("communication_door_street"), watch("communication_pincode")
+    ].filter(v => v && v.toString().trim().length > 0).length / 35
+  ) * 100);
+
+  const handleSaveDraft = async () => {
+    const data = getValues();
     setIsSaving(true);
-    const toastId = toast.loading("Encrypting and submitting your profile...");
+    const toastId = toast.loading("Persisting your progress to secure storage...");
     
     try {
       const { id, created_at, updated_at: old_updated, approval_status: old_status, ...rest } = data as any;
-      
+      const { error } = await supabase.from("students_master").upsert({
+        id: user.id,
+        ...rest,
+        department_id: studentDeptId,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+      toast.success("Progress Saved! You can Safely Reload.", { id: toastId });
+    } catch (err: any) {
+      toast.error("Save failed: " + (err.message || "Unknown error"), { id: toastId });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const onActualSubmit = async (data: StudentMasterFormData) => {
+    setIsConfirmOpen(false);
+    setIsSaving(true);
+    const toastId = toast.loading("Locking and submitting your official digital dossier...");
+    
+    try {
+      const { id, created_at, updated_at: old_updated, approval_status: old_status, ...rest } = data as any;
       const { error } = await supabase.from("students_master").upsert({
         id: user.id,
         ...rest,
@@ -221,18 +295,21 @@ export default function StudentProfile() {
       });
 
       if (error) throw error;
-      
       setStatus("pending_hod");
-      toast.success("Profile submitted successfully!", { id: toastId });
+      toast.success("Profile Locked & Submitted to HOD!", { id: toastId });
       setIsSuccessOpen(true);
     } catch (err: any) {
-      toast.error("Failed to save profile: " + (err.message || "Unknown error"), { id: toastId });
+      toast.error("Failed to submit profile: " + (err.message || "Unknown error"), { id: toastId });
     } finally {
       setIsSaving(false);
     }
   };
 
   const onSubmit = (data: StudentMasterFormData) => {
+    if (progressValue < 100) {
+      toast.error("Submission Denied: Profile Integrity must be 100% to submit.");
+      return;
+    }
     setFormData(data);
     setIsConfirmOpen(true);
   };
@@ -268,14 +345,64 @@ export default function StudentProfile() {
             status === 'approved_by_tpo' ? 'bg-green-100 text-green-700 border border-green-200' :
             status === 'approved_by_hod' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
             status === 'rejected' ? 'bg-red-100 text-red-700 border border-red-200' :
+            status === 'pending_hod' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' :
             'bg-yellow-100 text-yellow-700 border border-yellow-200'
           }`}>
             {status === 'approved_by_tpo' ? '✓ Verified by TPO' : 
              status === 'approved_by_hod' ? '◎ Verified by HOD' : 
              status === 'rejected' ? '✕ Needs Revision' : 
-             '⚠ Pending Verification'}
+             status === 'pending_hod' ? '✓ Submitted to HOD' :
+             '⚠ Pending Submission'}
           </div>
         </div>
+      </div>
+      
+      {/* Integrated Sticky Header: Progress + Mandatory Protocol */}
+      <div className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-20 py-3 mb-8 -mx-8 px-8 shadow-sm">
+         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4 divide-x divide-slate-200">
+               <div className="flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 shrink-0">Dossier Integrity</span>
+                  <span className="text-xs font-black text-slate-900 leading-none">
+                     {Math.round((
+                       [
+                         watch("first_name"), watch("last_name"), watch("gender"), watch("date_of_birth"), 
+                         watch("email_address"), watch("mobile_number"), watch("aadhar_number"),
+                         watch("nationality"), watch("state"), watch("district"), watch("religion"),
+                         watch("community"), watch("mark_10th"), watch("percentage_10th"), 
+                         watch("school_name_10th"), watch("board_10th"), watch("mark_12th"), watch("percentage_12th"), 
+                         watch("school_name_12th"), watch("board_12th"), watch("current_year"), watch("current_semester"),
+                         watch("reg_no"), watch("roll_number"), watch("degree_branches"), 
+                         watch("batches"), watch("regulations"), watch("resume_url"), watch("photo_url"),
+                         watch("skills"), watch("programming_languages"), watch("father_guardian_name"),
+                         watch("mother_name"), watch("communication_door_street"), watch("communication_pincode")
+                       ].filter(v => v && v.toString().trim().length > 0).length / 35
+                     ) * 100)}%
+                  </span>
+               </div>
+            </div>
+            
+            <div className="flex-1 max-w-md">
+               <Progress 
+                  value={(
+                    [
+                      watch("first_name"), watch("last_name"), watch("gender"), watch("date_of_birth"), 
+                      watch("email_address"), watch("mobile_number"), watch("aadhar_number"),
+                      watch("nationality"), watch("state"), watch("district"), watch("religion"),
+                      watch("community"), watch("mark_10th"), watch("percentage_10th"), 
+                      watch("school_name_10th"), watch("board_10th"), watch("mark_12th"), watch("percentage_12th"), 
+                      watch("school_name_12th"), watch("board_12th"), watch("current_year"), watch("current_semester"),
+                      watch("reg_no"), watch("roll_number"), watch("degree_branches"), 
+                      watch("batches"), watch("regulations"), watch("resume_url"), watch("photo_url"),
+                      watch("skills"), watch("programming_languages"), watch("father_guardian_name"),
+                      watch("mother_name"), watch("communication_door_street"), watch("communication_pincode")
+                    ].filter(v => v && v.toString().trim().length > 0).length / 35
+                  ) * 100} 
+                  className="h-1 bg-slate-100 rounded-full" 
+               />
+            </div>
+         </div>
       </div>
 
         {status === "approved_by_tpo" && (
@@ -302,7 +429,7 @@ export default function StudentProfile() {
 
             <div className="mt-6 space-y-6">
               {/* Personal Details as before... (keeping it same for now) */}
-              <TabsContent value="personal">
+              <TabsContent value="personal" forceMount className="data-[state=inactive]:hidden">
                 <Card className="border-primary/10 shadow-premium">
                   <CardHeader className="bg-primary/5 border-b">
                     <CardTitle className="text-lg">Personal Information</CardTitle>
@@ -423,15 +550,42 @@ export default function StudentProfile() {
                     <div className="space-y-2 md:col-span-3 text-primary font-semibold border-b pb-1 pt-4">Demographics</div>
                     <div className="space-y-2">
                       <Label>Nationality</Label>
-                      <Input {...register("nationality")} placeholder="e.g. Indian" />
+                      <select 
+                        {...register("nationality")}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <option value="">Select Nationality</option>
+                        <option value="INDIA">INDIA</option>
+                        <option value="OTHERS">OTHERS</option>
+                      </select>
                     </div>
                     <div className="space-y-2">
                       <Label>State</Label>
-                      <Input {...register("state")} placeholder="e.g. Tamil Nadu" />
+                      {nationality === "INDIA" ? (
+                        <select 
+                          {...register("state")}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <option value="">Select State</option>
+                          {INDIA_STATES.map(s => <option key={s} value={s.toUpperCase()}>{s.toUpperCase()}</option>)}
+                        </select>
+                      ) : (
+                        <Input {...register("state")} placeholder="e.g. Tamil Nadu" />
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label>District</Label>
-                      <Input {...register("district")} placeholder="e.g. Erode" />
+                      {state === "TAMIL NADU" ? (
+                        <select 
+                          {...register("district")}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <option value="">Select District</option>
+                          {TN_DISTRICTS.map(d => <option key={d} value={d.toUpperCase()}>{d.toUpperCase()}</option>)}
+                        </select>
+                      ) : (
+                        <Input {...register("district")} placeholder="e.g. Tirupathur" />
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label>Mother Tongue</Label>
@@ -469,7 +623,7 @@ export default function StudentProfile() {
               </TabsContent>
 
               {/* Academic Details - Reorganized */}
-              <TabsContent value="academic">
+              <TabsContent value="academic" forceMount className="data-[state=inactive]:hidden">
                 <Card className="border-primary/10 shadow-premium">
                   <CardHeader className="bg-primary/5 border-b">
                     <CardTitle className="text-lg">Academic Records</CardTitle>
@@ -479,29 +633,55 @@ export default function StudentProfile() {
                     <div className="space-y-2 md:col-span-2 text-primary font-semibold border-b pb-1">10th Standard Info</div>
                     <div className="space-y-2">
                       <Label>10th Mark</Label>
-                      <Input {...register("tenth_mark")} placeholder="e.g. 450" />
+                      <Input {...register("mark_10th")} placeholder="e.g. 450" />
                     </div>
                     <div className="space-y-2">
                       <Label>10th Percentage</Label>
-                      <Input {...register("tenth_percentage")} placeholder="e.g. 95%" />
+                      <Input {...register("percentage_10th")} placeholder="e.g. 95%" />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2">
                       <Label>10th School Name</Label>
-                      <Input {...register("tenth_school_name")} placeholder="Your 10th school name" />
+                      <Input {...register("school_name_10th")} placeholder="Your 10th school name" />
+                    </div>
+                    <div className="space-y-2">
+                       <Label>10th Board</Label>
+                       <select 
+                         {...register("board_10th")}
+                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                       >
+                         <option value="">Select Board</option>
+                         <option value="State Board">State Board</option>
+                         <option value="CBSE">CBSE</option>
+                         <option value="ICSE">ICSE</option>
+                         <option value="Others">Others</option>
+                       </select>
                     </div>
 
                     <div className="space-y-2 md:col-span-2 text-primary font-semibold border-b pb-1 pt-4">12th Standard Info</div>
                     <div className="space-y-2">
                       <Label>12th Mark</Label>
-                      <Input {...register("twelfth_mark")} placeholder="e.g. 550" />
+                      <Input {...register("mark_12th")} placeholder="e.g. 550" />
                     </div>
                     <div className="space-y-2">
                       <Label>12th Percentage</Label>
-                      <Input {...register("twelfth_percentage")} placeholder="e.g. 90%" />
+                      <Input {...register("percentage_12th")} placeholder="e.g. 90%" />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2">
                       <Label>12th School Name</Label>
-                      <Input {...register("twelfth_school_name")} placeholder="Your 12th school name" />
+                      <Input {...register("school_name_12th")} placeholder="Your 12th school name" />
+                    </div>
+                    <div className="space-y-2">
+                       <Label>12th Board</Label>
+                       <select 
+                         {...register("board_12th")}
+                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                       >
+                         <option value="">Select Board</option>
+                         <option value="State Board">State Board</option>
+                         <option value="CBSE">CBSE</option>
+                         <option value="ICSE">ICSE</option>
+                         <option value="Others">Others</option>
+                       </select>
                     </div>
 
                     <div className="space-y-2 md:col-span-2 text-primary font-semibold border-b pb-1 pt-4">Diploma Info</div>
@@ -529,15 +709,34 @@ export default function StudentProfile() {
                       </>
                     )}
 
-                    <div className="space-y-2 md:col-span-2 text-primary font-semibold border-b pb-1 pt-4">Professional Experience</div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Any Work Experience?</Label>
-                      <textarea
-                        {...register("work_experience")}
-                        rows={3}
-                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        placeholder="Detail any prior work experience in a professional manner. Leave blank if none."
-                      />
+                    <div className="space-y-4 md:col-span-2 border-slate-100 bg-slate-50/50 p-6 rounded-2xl border">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-base font-bold text-slate-900">Any Professional Work Experience?</Label>
+                        </div>
+                        <select 
+                          {...register("has_work_experience")}
+                          className="flex h-12 w-full md:w-40 rounded-xl border border-input bg-white px-3 py-2 text-sm font-bold shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <option value="NO">NO</option>
+                          <option value="YES">YES</option>
+                        </select>
+                      </div>
+
+                      {hasWorkExperience === "YES" && (
+                        <div className="space-y-3 pt-4 border-t border-slate-200 mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Sparkles className="h-4 w-4 text-primary" />
+                            <Label className="text-sm font-bold text-slate-800 uppercase tracking-tighter">Detail your Experience</Label>
+                          </div>
+                          <textarea
+                            {...register("work_experience")}
+                            rows={4}
+                            className="flex w-full rounded-2xl border border-input bg-white px-4 py-3 text-sm font-medium shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring placeholder:text-slate-400 leading-relaxed"
+                            placeholder="Describe your role, company, and key achievements in a professional manner..."
+                          />
+                        </div>
+                      )}
                     </div>
                     
                     <div className="space-y-2 md:col-span-2 text-primary font-semibold border-b pb-1 pt-4">College Performance</div>
@@ -579,9 +778,9 @@ export default function StudentProfile() {
                     )}
                     
                     <div className="space-y-2 md:col-span-2 pt-2 border-t mt-2">
-                      <Label className="text-muted-foreground mb-4 block text-xs">Based on exactly {currentSemester ? currentSemester : "0"} semesters completed/studying, enter your CGPA for each semester below.</Label>
+                      <Label className="text-muted-foreground mb-4 block text-xs">Based on {currentSemester && parseInt(currentSemester) > 1 ? parseInt(currentSemester) - 1 : "0"} semesters completed, enter your CGPA for each semester below.</Label>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        {Array.from({ length: Math.min(parseInt(currentSemester || "0") || 0, 10) }).map((_, i) => (
+                        {Array.from({ length: Math.max(0, (parseInt(currentSemester || "0") || 1) - 1) }).map((_, i) => (
                           <div key={i} className="space-y-2">
                             <Label>Sem {i + 1} CGPA</Label>
                             <Input {...register(`sem_${i + 1}_cgpa` as keyof StudentMasterFormData)} placeholder="e.g. 8.5" />
@@ -625,7 +824,7 @@ export default function StudentProfile() {
               </TabsContent>
 
               {/* Family & Address */}
-              <TabsContent value="family">
+              <TabsContent value="family" forceMount className="data-[state=inactive]:hidden">
                 <Card className="border-primary/10 shadow-premium">
                   <CardHeader className="bg-primary/5 border-b">
                     <CardTitle className="text-lg">Family & Communication</CardTitle>
@@ -635,6 +834,10 @@ export default function StudentProfile() {
                     <div className="space-y-2">
                       <Label>Father / Guardian Name</Label>
                       <Input {...register("father_guardian_name")} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Father Occupation</Label>
+                      <Input {...register("occupation_father_guardian")} placeholder="e.g. Farmer, Business, Private Sector" />
                     </div>
                     <div className="space-y-2">
                       <Label>Father Mobile Number</Label>
@@ -674,7 +877,7 @@ export default function StudentProfile() {
               </TabsContent>
 
               {/* College Details */}
-              <TabsContent value="college">
+              <TabsContent value="college" forceMount className="data-[state=inactive]:hidden">
                 <Card className="border-primary/10 shadow-premium">
                   <CardHeader className="bg-primary/5 border-b">
                     <CardTitle className="text-lg">College Information</CardTitle>
@@ -821,7 +1024,7 @@ export default function StudentProfile() {
               </TabsContent>
 
               {/* Placement Details */}
-              <TabsContent value="placement">
+              <TabsContent value="placement" forceMount className="data-[state=inactive]:hidden">
                 <Card className="border-primary/10 shadow-premium">
                   <CardHeader className="bg-primary/5 border-b">
                     <CardTitle className="text-lg">Placement & Professional Information</CardTitle>
@@ -855,16 +1058,60 @@ export default function StudentProfile() {
                       )}
                     </div>
 
-                    <div className="space-y-2 md:col-span-2 text-primary font-semibold border-b pb-1 pt-2">Essential Documents</div>
+                    <div className="space-y-4 md:col-span-2 text-primary font-semibold border-b pb-1 pt-2">Essential Documents (Public Drive Links)</div>
                     <div className="space-y-2">
                       <Label>Passport Size Photo URL / Link</Label>
-                      <Input {...register("photo_url")} placeholder="https://drive.google.com/..." />
-                      <p className="text-[10px] text-muted-foreground">Public Drive Link.</p>
+                      <Input 
+                        {...register("photo_url")} 
+                        placeholder="https://drive.google.com/..." 
+                        className={cn(
+                          "transition-all duration-300",
+                          watch("photo_url") && (
+                            (() => {
+                              try { new URL(watch("photo_url")); return true; } catch { return false; }
+                            })() 
+                            ? "border-emerald-500 bg-emerald-50/30 focus-visible:ring-emerald-500" 
+                            : "border-red-500 bg-red-50/30 focus-visible:ring-red-500"
+                          )
+                        )}
+                      />
+                      <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                         <span className={cn(
+                           "h-1.5 w-1.5 rounded-full",
+                           watch("photo_url") ? (
+                              (() => { try { new URL(watch("photo_url")); return true; } catch { return false; } })() 
+                              ? "bg-emerald-500" : "bg-red-500"
+                           ) : "bg-slate-300"
+                         )} />
+                         Public Drive Link (Ensure sharing is set to 'Anyone with link')
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label>Resume URL / Link (PDF)</Label>
-                      <Input {...register("resume_url")} placeholder="https://drive.google.com/..." />
-                      <p className="text-[10px] text-muted-foreground">Public Drive Link.</p>
+                      <Input 
+                        {...register("resume_url")} 
+                        placeholder="https://drive.google.com/..." 
+                        className={cn(
+                          "transition-all duration-300",
+                          watch("resume_url") && (
+                            (() => {
+                              try { new URL(watch("resume_url")); return true; } catch { return false; }
+                            })() 
+                            ? "border-emerald-500 bg-emerald-50/30 focus-visible:ring-emerald-500" 
+                            : "border-red-500 bg-red-50/30 focus-visible:ring-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+                          )
+                        )}
+                      />
+                      <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                         <span className={cn(
+                           "h-1.5 w-1.5 rounded-full",
+                           watch("resume_url") ? (
+                              (() => { try { new URL(watch("resume_url")); return true; } catch { return false; } })() 
+                              ? "bg-emerald-500" : "bg-red-500"
+                           ) : "bg-slate-300"
+                         )} />
+                         Direct PDF Drive Link (This should be a Public Drive Link)
+                      </p>
                     </div>
 
                     <div className="space-y-2 md:col-span-2 text-primary font-semibold border-b pb-1 pt-4">Technical Profile</div>
@@ -921,7 +1168,7 @@ export default function StudentProfile() {
               </TabsContent>
 
               {/* Other Information */}
-              <TabsContent value="other">
+              <TabsContent value="other" forceMount className="data-[state=inactive]:hidden">
                 <Card className="border-primary/10 shadow-premium">
                   <CardHeader className="bg-primary/5 border-b">
                     <CardTitle className="text-lg">Other Details</CardTitle>
@@ -1006,11 +1253,64 @@ export default function StudentProfile() {
             </div>
           </Tabs>
 
-          <div className="flex justify-end pt-8">
-            <Button type="submit" size="lg" className="w-full md:w-auto shadow-lg bg-primary hover:bg-primary/90 text-white px-8 py-6 rounded-xl transition-all hover:scale-105 active:scale-95" disabled={isSaving || status === 'approved_by_tpo'}>
-              {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Send className="mr-2 h-5 w-5" />}
-              Save and Submit for Approval
-            </Button>
+          {/* Ultra-Compact Footer Actions */}
+          <div className="flex items-center justify-between gap-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-slate-200 shadow-xl sticky bottom-4 z-30 mt-8">
+            <div className="flex items-center gap-3 pl-2">
+               <div className={cn(
+                  "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
+                  progressValue === 100 ? "bg-emerald-500 shadow-emerald-200" : "bg-slate-100",
+                  "shadow-sm"
+               )}>
+                  <TrendingUp className={cn(
+                     "h-4 w-4",
+                     progressValue === 100 ? "text-white" : "text-slate-400"
+                  )} />
+               </div>
+                <div className="flex items-center gap-3">
+                  <p className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-none">
+                     {status === 'approved_by_tpo' ? "✓ Verified by TPO" :
+                      status === 'approved_by_hod' ? "◎ Verified by HOD" :
+                      status === 'pending_hod' ? "✓ Submitted to HOD" : 
+                      progressValue === 100 ? "✓ Profile Complete" : 
+                      `${100 - progressValue}% remaining to unlock submit`}
+                  </p>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSaveDraft}
+                disabled={isSaving || !!(status && !['rejected'].includes(status))}
+                className="h-10 px-4 rounded-xl border-slate-200 hover:bg-slate-50 text-slate-600 font-bold active:scale-95 transition-all text-[11px] uppercase tracking-wider disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                ) : (
+                  <Save className="h-3 w-3 mr-2" />
+                )}
+                Save Draft
+              </Button>
+
+              <Button 
+                type="submit" 
+                disabled={isSaving || progressValue < 100 || !!(status && !['rejected'].includes(status))}
+                className={cn(
+                  "h-10 px-6 rounded-xl font-black uppercase tracking-widest text-[11px] transition-all active:scale-95 shadow-md",
+                  (progressValue === 100 && !(status && !['rejected'].includes(status))) 
+                      ? "bg-primary hover:bg-primary/90 text-white shadow-primary/20" 
+                      : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                )}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                ) : (
+                  <Send className="h-3 w-3 mr-2" />
+                )}
+                Submit to HOD
+              </Button>
+            </div>
           </div>
         </form>
 

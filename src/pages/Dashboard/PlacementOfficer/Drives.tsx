@@ -69,7 +69,7 @@ import {
   Info,
   Layers
 } from "lucide-react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { driveSchema, DriveFormData } from "@/lib/validations";
 
@@ -101,6 +101,7 @@ interface PlacementDrive {
   company_website: string | null;
   company_linkedin: string | null;
   other_links: string | null;
+  round_details?: any;
 }
 
 interface Company {
@@ -154,7 +155,13 @@ export default function Drives() {
       company_website: "",
       company_linkedin: "",
       other_links: "",
+      round_details: [],
     },
+  });
+
+  const { fields, append, remove, replace } = useFieldArray({
+    control: form.control,
+    name: "round_details",
   });
 
   const { data: drives, isLoading } = useQuery({
@@ -177,12 +184,12 @@ export default function Drives() {
         return data.filter(d => 
           d.companies?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           d.role_offered?.toLowerCase().includes(searchQuery.toLowerCase())
-        ) as PlacementDrive[];
+        ) as unknown as PlacementDrive[];
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as PlacementDrive[];
+      return data as unknown as PlacementDrive[];
     },
   });
 
@@ -302,7 +309,7 @@ export default function Drives() {
             .update({
               ...driveData,
               updated_at: new Date().toISOString()
-            })
+            } as any)
             .eq("id", editingDrive.id);
           if (error) throw error;
           driveId = editingDrive.id;
@@ -312,7 +319,7 @@ export default function Drives() {
             .insert([{ 
               ...driveData, 
               created_by: user?.id 
-            }])
+            } as any])
             .select()
             .single();
           if (error) throw error;
@@ -399,6 +406,7 @@ export default function Drives() {
       company_website: drive.company_website || "",
       company_linkedin: drive.company_linkedin || "",
       other_links: drive.other_links || "",
+      round_details: Array.isArray(drive.round_details) ? drive.round_details : [],
     });
     setIsDialogOpen(true);
   };
@@ -612,231 +620,253 @@ export default function Drives() {
                   }}
                 >
                   <Tabs defaultValue="basic" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/50 p-1 rounded-xl mb-6">
-                      <TabsTrigger value="basic" className="rounded-lg gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    <TabsList className="grid w-full grid-cols-4 h-14 bg-slate-100 p-1.5 rounded-2xl mb-8 shadow-inner border border-slate-200">
+                      <TabsTrigger value="basic" className="rounded-xl gap-2.5 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-bold text-xs uppercase tracking-tight">
                         <Building2 className="h-4 w-4" />
                         Basic Info
                       </TabsTrigger>
-                      <TabsTrigger value="job" className="rounded-lg gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      <TabsTrigger value="job" className="rounded-xl gap-2.5 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-bold text-xs uppercase tracking-tight">
                         <Briefcase className="h-4 w-4" />
                         Job Details
                       </TabsTrigger>
-                      <TabsTrigger value="eligibility" className="rounded-lg gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      <TabsTrigger value="eligibility" className="rounded-xl gap-2.5 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-bold text-xs uppercase tracking-tight">
                         <Target className="h-4 w-4" />
                         Eligibility
                       </TabsTrigger>
+                      <TabsTrigger value="rounds" className="rounded-xl gap-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-bold text-xs uppercase tracking-tight">
+                        <ClipboardList className="h-4 w-4" />
+                        Rounds
+                      </TabsTrigger>
                     </TabsList>
                     
-                    <TabsContent value="basic" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="h-8 w-1 bg-primary rounded-full" />
-                          <h3 className="font-bold text-primary flex items-center gap-2">
-                            <Layers className="h-4 w-4" />
-                            Primary Identification
-                          </h3>
+                    <TabsContent value="basic" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10 space-y-6 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
+                          <Building2 className="h-32 w-32 rotate-12" />
                         </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-1.5 bg-primary rounded-full" />
+                          <div>
+                             <h3 className="font-black text-primary uppercase text-sm tracking-widest">Company Identification</h3>
+                             <p className="text-[10px] text-muted-foreground font-bold">Primary company and position details</p>
+                          </div>
+                        </div>
+                        <div className="grid gap-6 sm:grid-cols-2 relative z-10">
                           {/* Company Selection */}
                           <div className="space-y-2">
-                            <Label className="text-sm font-semibold">Company Name *</Label>
-                            <Input {...form.register("company_name")} placeholder="e.g., Google India, Microsoft" className="bg-white border-primary/20 focus-visible:ring-primary shadow-sm" />
+                            <Label className="text-xs font-bold uppercase text-slate-500">Company Name *</Label>
+                            <Input {...form.register("company_name")} placeholder="e.g., Google India, Microsoft" className="h-11 bg-white border-primary/20 focus-visible:ring-primary shadow-sm font-semibold" />
                           </div>
 
                           {/* Role Offered */}
                           <div className="space-y-2">
-                            <Label className="text-sm font-semibold">Job Role Offered *</Label>
-                            <Input {...form.register("role_offered")} placeholder="e.g., Software Development Engineer" className="bg-white border-primary/20" />
+                            <Label className="text-xs font-bold uppercase text-slate-500">Job Role Offered *</Label>
+                            <Input {...form.register("role_offered")} placeholder="e.g., Software Development Engineer" className="h-11 bg-white border-primary/20 font-semibold" />
                           </div>
                         </div>
                       </div>
 
-                      <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="bg-muted/30 p-4 rounded-xl border space-y-4">
-                           <h3 className="font-bold flex items-center gap-2 text-foreground/80">
-                            <CalendarDays className="h-4 w-4" />
+                      <div className="grid gap-8 sm:grid-cols-2">
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-6 shadow-sm">
+                           <h3 className="font-black flex items-center gap-2 text-slate-800 uppercase text-xs tracking-wider">
+                            <CalendarDays className="h-4 w-4 text-primary" />
                             Drive Logistics
                           </h3>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold">Drive Type *</Label>
-                            <Controller
-                              name="drive_type"
-                              control={form.control}
-                              render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <SelectTrigger className="bg-white">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="placement">Placement Drive</SelectItem>
-                                    <SelectItem value="internship">Internship Drive</SelectItem>
-                                    <SelectItem value="both">Both (Placement + Intern)</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            />
-                          </div>
+                          <div className="grid gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-bold uppercase text-slate-400">Drive Classification</Label>
+                              <Controller
+                                name="drive_type"
+                                control={form.control}
+                                render={({ field }) => (
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="h-11 bg-white border-slate-200 font-bold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="placement">Placement Drive</SelectItem>
+                                      <SelectItem value="internship">Internship Drive</SelectItem>
+                                      <SelectItem value="both">Both (Placement + Intern)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              />
+                            </div>
 
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold">Visit Mode *</Label>
-                            <Controller
-                              name="visit_mode"
-                              control={form.control}
-                              render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <SelectTrigger className="bg-white">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="on_campus">Physical (On Campus)</SelectItem>
-                                    <SelectItem value="off_campus">External (Off Campus)</SelectItem>
-                                    <SelectItem value="virtual">Remote (Virtual)</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            />
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-bold uppercase text-slate-400">Visit Mode</Label>
+                              <Controller
+                                name="visit_mode"
+                                control={form.control}
+                                render={({ field }) => (
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="h-11 bg-white border-slate-200 font-bold">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="on_campus">Physical (On Campus)</SelectItem>
+                                      <SelectItem value="off_campus">External (Off Campus)</SelectItem>
+                                      <SelectItem value="virtual">Remote (Virtual)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              />
+                            </div>
                           </div>
                         </div>
 
-                        <div className="bg-muted/30 p-4 rounded-xl border space-y-4">
-                           <h3 className="font-bold flex items-center gap-2 text-foreground/80">
-                            <Clock className="h-4 w-4" />
-                            Deadlines & Slots
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-6 shadow-sm">
+                           <h3 className="font-black flex items-center gap-2 text-slate-800 uppercase text-xs tracking-wider">
+                            <Clock className="h-4 w-4 text-primary" />
+                            Timeline & Deadlines
                           </h3>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold flex items-center justify-between">
-                              <span>Drive Date *</span>
-                              <Badge variant="outline" className="text-[10px] uppercase font-bold">Slot</Badge>
-                            </Label>
-                            <Input type="date" {...form.register("visit_date")} className="bg-white" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold flex items-center justify-between">
-                              <span>App. Deadline</span>
-                              <Badge variant="secondary" className="text-[10px] uppercase font-semibold h-4">Optional</Badge>
-                            </Label>
-                            <Input type="date" {...form.register("application_deadline")} className="bg-white" placeholder="Leave empty if no deadline" />
-                            <p className="text-[10px] text-muted-foreground italic">Leave empty for "Open Application"</p>
+                          <div className="grid gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-bold uppercase text-slate-400 flex items-center justify-between">
+                                 <span>Scheduled Drive Date *</span>
+                                 <Badge variant="outline" className="text-[9px] uppercase font-black bg-white">Primary</Badge>
+                              </Label>
+                              <Input type="date" {...form.register("visit_date")} className="h-11 bg-white border-slate-200 font-bold" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-bold uppercase text-slate-400 flex items-center justify-between">
+                                <span>Application Deadline</span>
+                                <Badge variant="secondary" className="text-[9px] uppercase font-black">Flexible</Badge>
+                              </Label>
+                              <Input type="date" {...form.register("application_deadline")} className="h-11 bg-white border-slate-200 font-bold text-primary" placeholder="Leave empty if no deadline" />
+                            </div>
                           </div>
                         </div>
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="job" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="bg-green-50/50 p-4 rounded-xl border border-green-100 space-y-4">
-                          <h3 className="font-bold text-green-700 flex items-center gap-2">
-                            <DollarSign className="h-4 w-4" />
-                            Compensation Details
-                          </h3>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-green-800">CTC (₹ LPA) - Placement</Label>
-                            <Input type="number" step="0.1" {...form.register("ctc_amount", { valueAsNumber: true })} placeholder="12.5" className="bg-white focus-visible:ring-green-500" />
+                    <TabsContent value="job" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <div className="grid gap-8 sm:grid-cols-2">
+                        <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100 space-y-6 relative overflow-hidden group">
+                           <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity">
+                            <DollarSign className="h-24 w-24" />
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-green-800">Stipend (₹/mo) - Internship</Label>
-                            <Input type="number" {...form.register("stipend_amount", { valueAsNumber: true })} placeholder="25000" className="bg-white focus-visible:ring-green-500" />
+                          <h3 className="font-black text-emerald-700 flex items-center gap-2 uppercase text-sm tracking-widest">
+                            <DollarSign className="h-5 w-5" />
+                            Compensation Package
+                          </h3>
+                          <div className="grid gap-4 relative z-10">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">Placement CTC (₹ LPA)</Label>
+                              <Input type="number" step="0.1" {...form.register("ctc_amount", { valueAsNumber: true })} placeholder="12.5" className="h-11 bg-white border-emerald-200 focus-visible:ring-emerald-500 font-bold text-emerald-900" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">Monthly Stipend (₹)</Label>
+                              <Input type="number" {...form.register("stipend_amount", { valueAsNumber: true })} placeholder="25000" className="h-11 bg-white border-emerald-200 focus-visible:ring-emerald-500 font-bold" />
+                            </div>
                           </div>
                         </div>
 
-                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4">
-                          <h3 className="font-bold text-blue-700 flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            Work Location
-                          </h3>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-blue-800">Base Location</Label>
-                            <Input {...form.register("work_location")} placeholder="e.g., Bangalore, Hyderabad, Remote" className="bg-white focus-visible:ring-blue-500" />
+                        <div className="bg-sky-50/50 p-6 rounded-2xl border border-sky-100 space-y-6 relative overflow-hidden group">
+                          <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity">
+                            <MapPin className="h-24 w-24" />
                           </div>
-                          <div className="space-y-4">
-                            <Label className="text-sm font-semibold text-blue-800">Bond / Service Agreement</Label>
-                            <Input {...form.register("bond_details")} placeholder="e.g., 2 Years / No Bond" className="bg-white focus-visible:ring-blue-500" />
+                          <h3 className="font-black text-sky-700 flex items-center gap-2 uppercase text-sm tracking-widest">
+                            <MapPin className="h-5 w-5" />
+                            Location & Policy
+                          </h3>
+                          <div className="grid gap-4 relative z-10">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-sky-800 tracking-wider">Work Location</Label>
+                              <Input {...form.register("work_location")} placeholder="e.g., Bangalore, Hyderabad, Remote" className="h-11 bg-white border-sky-200 focus-visible:ring-sky-500 font-bold" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-sky-800 tracking-wider">Service Agreement / Bond</Label>
+                              <Input {...form.register("bond_details")} placeholder="e.g., 2 Years / No Bond" className="h-11 bg-white border-sky-200 focus-visible:ring-sky-500 font-bold" />
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label className="font-bold flex items-center gap-2">
-                            <ClipboardList className="h-4 w-4 text-primary" />
+                      <div className="space-y-6">
+                        <div className="space-y-3">
+                          <Label className="font-black text-slate-700 flex items-center gap-2 uppercase text-xs tracking-widest">
+                            <ClipboardList className="h-5 w-5 text-primary" />
                             Detailed Job Description
                           </Label>
-                          <Textarea {...form.register("job_description")} className="min-h-[120px] bg-white border-primary/10 shadow-inner" placeholder="Detailed roles, responsibilities, and specific requirements..." />
+                          <Textarea {...form.register("job_description")} className="min-h-[140px] bg-white border-slate-200 shadow-sm focus-visible:ring-primary font-medium" placeholder="Roles, responsibilities, and specific software requirements..." />
                         </div>
-                        <div className="space-y-2">
-                          <Label className="font-bold flex items-center gap-2 whitespace-nowrap">
-                            <Info className="h-4 w-4 text-muted-foreground" />
-                            Additional Instructions for Students
+                        <div className="space-y-3">
+                          <Label className="font-black text-slate-700 flex items-center gap-2 uppercase text-xs tracking-widest">
+                            <Info className="h-5 w-5 text-amber-500" />
+                            Officer Directives
                           </Label>
-                          <Textarea {...form.register("remarks")} placeholder="Notes about rounds, dress code, platform details..." className="bg-white" />
+                          <Textarea {...form.register("remarks")} placeholder="Notes for candidates: Dress code, Laptop requirements, etc." className="h-24 bg-white border-slate-200 focus-visible:ring-amber-500" />
                         </div>
                       </div>
 
-                      <div className="bg-muted/10 p-5 rounded-xl border border-dashed space-y-4">
-                        <h3 className="text-sm font-bold flex items-center gap-2">
+                      <div className="bg-slate-100/50 p-6 rounded-3xl border-2 border-dashed border-slate-200 space-y-6">
+                        <h3 className="font-black text-slate-500 flex items-center gap-2 uppercase text-[10px] tracking-[0.2em] px-2">
                           <Globe className="h-4 w-4" />
-                          External Digital Links
+                          Digital Presence
                         </h3>
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="grid gap-6 sm:grid-cols-2">
                           <div className="space-y-2">
-                            <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                              <Globe className="h-3 w-3" />
-                              Website
-                            </Label>
-                            <Input {...form.register("company_website")} placeholder="https://example.com" className="bg-white" />
+                            <Label className="text-[10px] font-bold uppercase text-slate-400">Official Website</Label>
+                            <Input {...form.register("company_website")} placeholder="https://google.com" className="h-11 bg-white" />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                              <Linkedin className="h-3 w-3" />
-                              LinkedIn
-                            </Label>
-                            <Input {...form.register("company_linkedin")} placeholder="https://linkedin.com/company/..." className="bg-white" />
-                          </div>
-                          <div className="space-y-2 sm:col-span-2">
-                            <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Other / Registration Links</Label>
-                            <Input {...form.register("other_links")} placeholder="Registration portral, Drive brochure PDF link, etc." className="bg-white" />
+                            <Label className="text-[10px] font-bold uppercase text-slate-400">LinkedIn Profile</Label>
+                            <Input {...form.register("company_linkedin")} placeholder="https://linkedin.com/company/google" className="h-11 bg-white" />
                           </div>
                         </div>
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="eligibility" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <TabsContent value="eligibility" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
                       <div className="grid gap-6 sm:grid-cols-3">
-                         <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 space-y-2">
-                          <Label className="text-xs font-bold text-orange-800 flex items-center gap-1.5 uppercase">
-                            <GraduationCap className="h-3.5 w-3.5" />
-                            Minimum CGPA
+                         <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-200 space-y-3 relative overflow-hidden group shadow-sm transition-all hover:shadow-orange-100">
+                          <div className="absolute top-0 right-0 p-4 opacity-[0.1] group-hover:rotate-12 transition-transform">
+                             <GraduationCap className="h-10 w-10 text-orange-600" />
+                          </div>
+                          <Label className="text-[10px] font-black text-orange-800 flex items-center gap-2 uppercase tracking-widest">
+                            Min CGPA
                           </Label>
-                          <Input type="number" step="0.01" {...form.register("min_cgpa", { valueAsNumber: true })} className="bg-white focus-visible:ring-orange-500 font-bold" />
+                          <Input type="number" step="0.01" {...form.register("min_cgpa", { valueAsNumber: true })} className="h-11 bg-white border-orange-200 focus-visible:ring-orange-500 font-black text-xl text-orange-900" />
                         </div>
-                        <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 space-y-2">
-                          <Label className="text-xs font-bold text-orange-800 flex items-center gap-1.5 uppercase">
-                            <History className="h-3.5 w-3.5" />
+                        <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-200 space-y-3 relative overflow-hidden group shadow-sm transition-all hover:shadow-orange-100">
+                          <div className="absolute top-0 right-0 p-4 opacity-[0.1] group-hover:rotate-12 transition-transform">
+                             <History className="h-10 w-10 text-orange-600" />
+                          </div>
+                          <Label className="text-[10px] font-black text-orange-800 flex items-center gap-2 uppercase tracking-widest">
                             Max Backlogs
                           </Label>
-                          <Input type="number" {...form.register("max_backlogs", { valueAsNumber: true })} className="bg-white focus-visible:ring-orange-500 font-bold" />
+                          <Input type="number" {...form.register("max_backlogs", { valueAsNumber: true })} className="h-11 bg-white border-orange-200 focus-visible:ring-orange-500 font-black text-xl text-orange-900" />
                         </div>
-                        <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 space-y-2">
-                          <Label className="text-xs font-bold text-orange-800 flex items-center gap-1.5 uppercase">
-                            <Award className="h-3.5 w-3.5" />
-                            Max History
+                        <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-200 space-y-3 relative overflow-hidden group shadow-sm transition-all hover:shadow-orange-100">
+                          <div className="absolute top-0 right-0 p-4 opacity-[0.1] group-hover:rotate-12 transition-transform">
+                             <Award className="h-10 w-10 text-orange-600" />
+                          </div>
+                          <Label className="text-[10px] font-black text-orange-800 flex items-center gap-2 uppercase tracking-widest">
+                            Max Arrears
                           </Label>
-                          <Input type="number" {...form.register("max_history_arrears", { valueAsNumber: true })} className="bg-white focus-visible:ring-orange-500 font-bold" />
+                          <Input type="number" {...form.register("max_history_arrears", { valueAsNumber: true })} className="h-11 bg-white border-orange-200 focus-visible:ring-orange-500 font-black text-xl text-orange-900" />
                         </div>
                       </div>
 
-                      <div className="grid gap-4 sm:grid-cols-3 bg-muted/20 p-4 rounded-xl border">
-                        <div className="space-y-2">
-                          <Label className="text-[11px] font-bold uppercase text-muted-foreground">Min 10th %</Label>
-                          <Input type="number" step="0.1" {...form.register("min_10th_mark", { valueAsNumber: true })} className="bg-white h-8" />
+                      <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-6 shadow-inner">
+                        <div className="flex items-center gap-2 px-2">
+                           <Layers className="h-4 w-4 text-slate-400" />
+                           <h3 className="text-xs font-black uppercase text-slate-500 tracking-[0.2em]">Academic Benchmarks</h3>
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-[11px] font-bold uppercase text-muted-foreground">Min 12th %</Label>
-                          <Input type="number" step="0.1" {...form.register("min_12th_mark", { valueAsNumber: true })} className="bg-white h-8" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-[11px] font-bold uppercase text-muted-foreground">Eligible Batches</Label>
-                          <Input {...form.register("eligible_batches")} placeholder="2021-2025" className="bg-white h-8" />
+                        <div className="grid gap-6 sm:grid-cols-3">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-slate-400 px-1">Min 10th %</Label>
+                            <Input type="number" step="0.1" {...form.register("min_10th_mark", { valueAsNumber: true })} className="h-11 bg-white border-slate-200 font-bold" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-slate-400 px-1">Min 12th / Diploma %</Label>
+                            <Input type="number" step="0.1" {...form.register("min_12th_mark", { valueAsNumber: true })} className="h-11 bg-white border-slate-200 font-bold" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-slate-400 px-1">Eligible Batches</Label>
+                            <Input {...form.register("eligible_batches")} placeholder="2021-2025" className="h-11 bg-white border-slate-200 font-bold" />
+                          </div>
                         </div>
                       </div>
 
@@ -862,6 +892,83 @@ export default function Drives() {
                               <span className="truncate">{dept.code}</span>
                             </label>
                           ))}
+                        </div>
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="rounds" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 min-h-[400px]">
+                      <div className="bg-purple-50/50 p-6 rounded-2xl border border-purple-100 space-y-6">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <h3 className="font-bold text-purple-900 flex items-center gap-2">
+                              <ClipboardList className="h-5 w-5" />
+                              Recruitment Process Rounds
+                            </h3>
+                            <p className="text-xs text-purple-700/70 font-medium">Define the sequence of selection stages for this drive.</p>
+                          </div>
+                          <div className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-purple-200">
+                             <Label className="text-[10px] font-black uppercase text-purple-900">No. of Rounds</Label>
+                             <Input 
+                                type="number" 
+                                className="w-16 h-8 text-center font-bold text-purple-900 border-purple-200"
+                                placeholder="0"
+                                min="0"
+                                onChange={(e) => {
+                                  const count = parseInt(e.target.value) || 0;
+                                  const currentCount = fields.length;
+                                  if (count > currentCount) {
+                                    for (let i = currentCount; i < count; i++) {
+                                      append({ name: `Round ${i + 1}`, description: "" });
+                                    }
+                                  } else if (count < currentCount) {
+                                    for (let i = currentCount - 1; i >= count; i--) {
+                                      remove(i);
+                                    }
+                                  }
+                                }}
+                                value={fields.length}
+                             />
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          {fields.map((field, index) => (
+                            <div key={field.id} className="group relative bg-white p-4 rounded-xl border border-purple-100 shadow-sm transition-all hover:shadow-md hover:border-purple-300">
+                              <div className="absolute -left-3 top-1/2 -translate-y-1/2 h-8 w-1.5 bg-purple-500 rounded-full opacity-0 group-hover:opacity-100 transition-all" />
+                              <div className="grid gap-4 sm:grid-cols-12 items-start">
+                                <div className="sm:col-span-1">
+                                  <div className="h-8 w-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-black text-xs">
+                                    {index + 1}
+                                  </div>
+                                </div>
+                                <div className="sm:col-span-11 space-y-4">
+                                  <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="space-y-1.5">
+                                      <Label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Round Title</Label>
+                                      <Input 
+                                        {...form.register(`round_details.${index}.name`)} 
+                                        placeholder="e.g. Aptitude Test, Technical Interview"
+                                        className="h-10 font-bold text-slate-900 border-slate-200 focus-visible:ring-purple-500"
+                                      />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <Label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Brief Description / Requirements</Label>
+                                      <Input 
+                                        {...form.register(`round_details.${index}.description`)} 
+                                        placeholder="e.g. Duration: 60 mins, Mode: Virtual"
+                                        className="h-10 text-slate-700 border-slate-200 focus-visible:ring-purple-500"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {fields.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-purple-200 rounded-2xl bg-purple-50/30">
+                              <Layers className="h-10 w-10 text-purple-200 mb-3" />
+                              <p className="text-sm font-bold text-purple-300 italic tracking-tight">Enter Number of Rounds above to start configuring the process.</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </TabsContent>

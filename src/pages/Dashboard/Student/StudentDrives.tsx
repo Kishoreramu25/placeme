@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { 
   Building2, Calendar, MapPin, Briefcase, ChevronRight, 
   CheckCircle2, AlertCircle, Info, Loader2, FileText, CheckCircle, Plus,
-  DollarSign, Globe, Linkedin, ExternalLink, Target
+  DollarSign, Globe, Linkedin, ExternalLink, Target, Sparkles, ClipboardList, Clock
 } from "lucide-react";
 import {
   Dialog,
@@ -21,8 +21,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
 
 export default function StudentDrives() {
   const { user } = useAuth();
@@ -110,6 +113,7 @@ export default function StudentDrives() {
           max_history_arrears,
           remarks,
           status,
+          round_details,
           companies (name),
           drive_eligible_departments (department_id)
         `)
@@ -120,7 +124,7 @@ export default function StudentDrives() {
       if (driveError) throw driveError;
 
       // 5. Map applications to drives
-      return (allDrives || []).map(drive => {
+      return ((allDrives as any) || []).map((drive: any) => {
         const application = appMap.get(drive.id);
         return {
           ...drive,
@@ -169,10 +173,22 @@ export default function StudentDrives() {
       </div>
     );
   }
-
-
-
-
+  const getStatusBadge = (status: string) => {
+    switch(status) {
+      case 'pending_hod':
+        return { label: '⏳ Pending HOD Review', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' }
+      case 'approved_by_hod':
+        return { label: '✅ HOD Approved', color: 'bg-blue-100 text-blue-800 border-blue-200' }
+      case 'approved_by_tpo':
+        return { label: '🎉 TPO Approved', color: 'bg-green-100 text-green-800 border-green-200' }
+      case 'rejected_by_hod':
+        return { label: '❌ HOD Rejected', color: 'bg-red-100 text-red-800 border-red-200' }
+      case 'rejected_by_tpo':
+        return { label: '❌ TPO Rejected', color: 'bg-red-100 text-red-800 border-red-200' }
+      default:
+        return { label: 'APPLIED', color: 'bg-gray-100 text-gray-800 border-gray-200' }
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -196,6 +212,7 @@ export default function StudentDrives() {
         </p>
       </div>
 
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {drives?.map((drive) => (
           <Card key={drive.id} className="flex flex-col border-primary/10 hover:shadow-premium transition-all">
@@ -205,22 +222,9 @@ export default function StudentDrives() {
                   <Building2 className="h-6 w-6 text-primary" />
                 </div>
                 {drive.applicationStatus ? (
-                  <Badge 
-                    variant="outline" 
-                    className={
-                      drive.applicationStatus.includes('rejected') 
-                        ? "bg-red-50 text-red-700 border-red-300 font-bold" 
-                        : "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold"
-                    }
-                  >
-                    {drive.applicationStatus === 'pending_hod' || drive.applicationStatus === 'approved_by_hod' 
-                      ? 'APPLIED' 
-                      : drive.applicationStatus === 'rejected_by_hod' 
-                        ? 'HOD REJECTED' 
-                        : drive.applicationStatus === 'rejected_by_tpo' 
-                          ? 'TPO REJECTED' 
-                          : drive.applicationStatus.replace(/_/g, ' ').toUpperCase()
-                    }
+                  <Badge variant="outline" 
+                    className={getStatusBadge(drive.applicationStatus).color}>
+                    {getStatusBadge(drive.applicationStatus).label}
                   </Badge>
                 ) : (
                   <Badge className="bg-slate-900 text-white font-bold tracking-wider">AVAILABLE</Badge>
@@ -276,188 +280,289 @@ export default function StudentDrives() {
 
       {/* Drive Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
           {selectedDrive && (
             <>
-              <DialogHeader className="p-6 pb-2">
-                <div className="flex items-center gap-4 mb-2">
-                  <div className="bg-primary/10 p-3 rounded-xl text-primary">
-                    <Building2 className="h-8 w-8" />
+              <div className="bg-primary/10 px-6 py-5 border-b border-primary/20 bg-gradient-to-r from-primary/5 to-transparent shrink-0">
+                <DialogHeader>
+                  <div className="flex items-center gap-4">
+                    <div className="bg-white p-3 rounded-2xl text-primary shadow-sm border border-primary/10">
+                      <Building2 className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-2xl font-black text-primary tracking-tight">{selectedDrive.companies?.name}</DialogTitle>
+                      <DialogDescription className="text-sm font-bold text-slate-600 flex items-center gap-2">
+                        <Briefcase className="h-4 w-4" />
+                        {selectedDrive.role_offered}
+                      </DialogDescription>
+                    </div>
                   </div>
-                  <div>
-                    <DialogTitle className="text-2xl">{selectedDrive.companies?.name}</DialogTitle>
-                    <DialogDescription className="text-md font-medium text-foreground">
-                      {selectedDrive.role_offered}
-                    </DialogDescription>
-                  </div>
-                </div>
-              </DialogHeader>
+                </DialogHeader>
+              </div>
 
-              <ScrollArea className="flex-1 p-6 pt-0">
+              <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar">
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl relative shadow-sm">
-                      <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">Package (CTC)</p>
-                      <p className="font-bold text-xl text-slate-900">₹{selectedDrive.ctc_amount >= 1000 ? (selectedDrive.ctc_amount / 100000).toFixed(1) : selectedDrive.ctc_amount} LPA</p>
-                    </div>
-                    {selectedDrive.stipend_amount && (
-                      <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                        <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">Stipend</p>
-                        <p className="font-bold text-xl text-slate-900">₹{selectedDrive.stipend_amount.toLocaleString()}/mo</p>
-                      </div>
-                    )}
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                      <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">Work Location</p>
-                      <p className="font-bold text-sm text-slate-800 truncate">{selectedDrive.work_location || "PAN India"}</p>
-                    </div>
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                      <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">Visit Mode</p>
-                      <p className="font-bold text-sm text-slate-800 uppercase">{selectedDrive.visit_mode.replace(/_/g, ' ')}</p>
-                    </div>
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                      <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">App. Deadline</p>
-                      <p className="font-bold text-sm text-slate-800">{selectedDrive.application_deadline ? new Date(selectedDrive.application_deadline).toLocaleDateString() : "Open Application"}</p>
-                    </div>
-                  </div>
-
-                  {/* Company Digital Assets */}
-                  {(selectedDrive.company_website || selectedDrive.company_linkedin || selectedDrive.other_links) && (
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-wrap gap-3">
-                      {selectedDrive.company_website && (
-                        <a href={selectedDrive.company_website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:border-slate-800 hover:text-slate-900 transition-all shadow-sm">
-                          <Globe className="h-3 w-3" /> Website
-                        </a>
-                      )}
-                      {selectedDrive.company_linkedin && (
-                        <a href={selectedDrive.company_linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:border-slate-800 hover:text-slate-900 transition-all shadow-sm">
-                          <Linkedin className="h-3 w-3" /> LinkedIn
-                        </a>
-                      )}
-                      {selectedDrive.other_links && (
-                        <a href={selectedDrive.other_links} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:border-slate-800 hover:text-slate-900 transition-all shadow-sm">
-                          <ExternalLink className="h-3 w-3" /> Digital Resources
-                        </a>
-                      )}
-                    </div>
+                  {/* Status Alerts */}
+                  {(selectedDrive.applicationStatus === 'rejected_by_hod' || selectedDrive.applicationStatus === 'rejected_by_tpo') && (
+                    <Alert variant="destructive" className="bg-red-50 border-red-200">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <AlertTitle className="text-xs font-black uppercase tracking-widest text-red-800">Application Status: Rejected</AlertTitle>
+                      <AlertDescription className="text-sm font-medium text-red-600">
+                        {selectedDrive.applicationDetails?.remarks || "Please check your eligibility criteria or contact the placement cell."}
+                      </AlertDescription>
+                    </Alert>
                   )}
 
-                  <div className="space-y-3">
-                    <h4 className="font-bold flex items-center gap-2 text-slate-900">
-                      <FileText className="h-5 w-5 text-slate-600" /> 
-                      Professional Job Description
-                    </h4>
-                    <div className="p-5 bg-white rounded-xl border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-                      {selectedDrive.job_description || "Detailed requirements as specified by the organization."}
-                    </div>
-                  </div>
+                  <Tabs defaultValue="basic" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4 h-14 bg-slate-100 p-1.5 rounded-2xl mb-8 shadow-inner border border-slate-200">
+                      <TabsTrigger value="basic" className="rounded-xl gap-2.5 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
+                        <Info className="h-3.5 w-3.5" />
+                        Details
+                      </TabsTrigger>
+                      <TabsTrigger value="job" className="rounded-xl gap-2.5 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
+                        <Briefcase className="h-3.5 w-3.5" />
+                        Job
+                      </TabsTrigger>
+                      <TabsTrigger value="eligibility" className="rounded-xl gap-2.5 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
+                        <Target className="h-3.5 w-3.5" />
+                        Eligibility
+                      </TabsTrigger>
+                      <TabsTrigger value="rounds" className="rounded-xl gap-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
+                        <ClipboardList className="h-3.5 w-3.5" />
+                        Rounds
+                      </TabsTrigger>
+                    </TabsList>
 
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <h4 className="font-bold flex items-center gap-2 text-slate-900 border-b pb-2">
-                        <Target className="h-5 w-5 text-slate-500" />
-                        Eligibility Criteria
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
-                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Min CGPA</p>
-                          <p className="font-bold text-slate-900">{selectedDrive.min_cgpa}</p>
+                    <TabsContent value="basic" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
+                      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                         <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl relative shadow-sm overflow-hidden group">
+                           <div className="absolute top-0 right-0 p-4 opacity-[0.05] group-hover:scale-110 transition-transform"><Calendar className="h-8 w-8" /></div>
+                           <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Drive Date</p>
+                           <p className="font-bold text-slate-800">{new Date(selectedDrive.visit_date).toLocaleDateString('en-IN', { dateStyle: 'full' })}</p>
                         </div>
-                        <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
-                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Max Backlogs</p>
-                          <p className="font-bold text-slate-900">{selectedDrive.max_backlogs}</p>
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl relative shadow-sm overflow-hidden group">
+                           <div className="absolute top-0 right-0 p-4 opacity-[0.05] group-hover:scale-110 transition-transform"><MapPin className="h-8 w-8" /></div>
+                           <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Base Location</p>
+                           <p className="font-bold text-slate-800">{selectedDrive.work_location || "Not Specified"}</p>
                         </div>
-                        <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
-                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Max History</p>
-                          <p className="font-bold text-slate-900">{selectedDrive.max_history_arrears || 0}</p>
-                        </div>
-                        <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
-                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">10th Mark</p>
-                          <p className="font-bold text-slate-900">{selectedDrive.min_10th_mark}%</p>
-                        </div>
-                        <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
-                          <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">12th Mark</p>
-                          <p className="font-bold text-slate-900">{selectedDrive.min_12th_mark}%</p>
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl relative shadow-sm overflow-hidden group">
+                           <div className="absolute top-0 right-0 p-4 opacity-[0.05] group-hover:scale-110 transition-transform"><Globe className="h-8 w-8" /></div>
+                           <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Visit Mode</p>
+                           <p className="font-bold text-slate-800 uppercase tracking-tight">{selectedDrive.visit_mode.replace(/_/g, ' ')}</p>
                         </div>
                       </div>
-                      <div className="p-3 bg-slate-100/50 border border-slate-200 rounded-lg">
-                        <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Target Batches</p>
-                        <p className="text-sm font-bold text-slate-900">{selectedDrive.eligible_batches || "2021-2025"}</p>
-                      </div>
-                    </div>
 
-                    <div className="space-y-4">
-                      <h4 className="font-bold flex items-center gap-2 text-slate-900 border-b pb-2">
-                        <Info className="h-5 w-5 text-slate-500" />
-                        Organizational Details
-                      </h4>
-                      <div className="space-y-3">
-                        {selectedDrive.bond_details && (
-                          <div className="p-4 border border-slate-200 rounded-xl bg-white shadow-sm">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Bond & Terms</p>
-                            <p className="text-sm text-slate-800 font-semibold">{selectedDrive.bond_details}</p>
+                      <div className="grid gap-6 sm:grid-cols-2">
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4 shadow-sm">
+                           <h3 className="font-black flex items-center gap-2 text-slate-800 uppercase text-xs tracking-wider">
+                            <Clock className="h-4 w-4 text-primary" />
+                            Timeline Information
+                          </h3>
+                          <div className="space-y-4">
+                            <div className="space-y-1">
+                               <Label className="text-[10px] font-bold uppercase text-slate-400">Application Deadline</Label>
+                               <p className="font-black text-primary uppercase text-sm">{selectedDrive.application_deadline ? new Date(selectedDrive.application_deadline).toLocaleDateString() : "Open Application"}</p>
+                            </div>
+                            <div className="space-y-1">
+                               <Label className="text-[10px] font-bold uppercase text-slate-400">Scheduled Time</Label>
+                               <p className="font-black text-slate-800 text-sm">09:00 AM (Tentative)</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {(selectedDrive.company_website || selectedDrive.company_linkedin || selectedDrive.other_links) && (
+                          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4 shadow-sm">
+                             <h3 className="font-black flex items-center gap-2 text-slate-800 uppercase text-xs tracking-wider">
+                              <Globe className="h-4 w-4 text-primary" />
+                              Official Links
+                            </h3>
+                            <div className="flex flex-col gap-2">
+                              {selectedDrive.company_website && (
+                                <a href={selectedDrive.company_website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">
+                                  <Globe className="h-3.5 w-3.5" /> Official Website
+                                </a>
+                              )}
+                              {selectedDrive.company_linkedin && (
+                                <a href={selectedDrive.company_linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-blue-600 hover:underline">
+                                  <Linkedin className="h-3.5 w-3.5" /> Company LinkedIn
+                                </a>
+                              )}
+                              {selectedDrive.other_links && (
+                                <a href={selectedDrive.other_links} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-orange-600 hover:underline">
+                                  <ExternalLink className="h-3.5 w-3.5" /> Other Resources
+                                </a>
+                              )}
+                            </div>
                           </div>
                         )}
-                        <div className="p-4 border border-slate-200 rounded-xl bg-white shadow-sm">
-                          <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Visit Classification</p>
-                          <p className="text-sm font-bold text-slate-800 uppercase leading-none">{selectedDrive.drive_type}</p>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="job" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
+                      <div className="grid gap-6 sm:grid-cols-2">
+                         <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100 flex items-center justify-between shadow-sm">
+                            <div className="space-y-1">
+                               <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Placement CTC</p>
+                               <p className="text-2xl font-black text-emerald-900 leading-none">₹{selectedDrive.ctc_amount >= 1000 ? (selectedDrive.ctc_amount / 100000).toFixed(1) : selectedDrive.ctc_amount} LPA</p>
+                            </div>
+                            <div className="h-12 w-12 bg-white rounded-xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
+                               <DollarSign className="h-6 w-6" />
+                            </div>
+                         </div>
+                         {selectedDrive.stipend_amount && (
+                           <div className="bg-emerald-900/5 p-6 rounded-2xl border border-emerald-100 flex items-center justify-between shadow-sm">
+                              <div className="space-y-1">
+                                 <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Monthly Stipend</p>
+                                 <p className="text-2xl font-black text-emerald-900 leading-none">₹{selectedDrive.stipend_amount.toLocaleString()}</p>
+                              </div>
+                              <div className="h-12 w-12 bg-white rounded-xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
+                                 <Sparkles className="h-6 w-6" />
+                              </div>
+                           </div>
+                         )}
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="space-y-3">
+                          <Label className="font-black text-slate-700 flex items-center gap-2 uppercase text-[10px] tracking-[0.2em] border-b pb-2">
+                             <Briefcase className="h-4 w-4 text-emerald-600" />
+                             Job Description & Candidate Responsibilities
+                          </Label>
+                          <div className="p-6 bg-white rounded-3xl border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed shadow-inner min-h-[140px]">
+                            {selectedDrive.job_description || "Detailed requirements as specified by the organization will be briefed during the session."}
+                          </div>
+                        </div>
+
+                        <div className="grid gap-6 sm:grid-cols-2">
+                           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Service Policy</h4>
+                              <p className="text-sm font-bold text-slate-800">{selectedDrive.bond_details || "No Service Agreement Mentioned"}</p>
+                           </div>
+                           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Classification</h4>
+                              <p className="text-sm font-black text-emerald-600 uppercase italic tracking-tight">{selectedDrive.drive_type} Opportunity</p>
+                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    </TabsContent>
 
-                  {selectedDrive.remarks && (
-                    <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl space-y-3">
-                      <h4 className="font-bold flex items-center gap-2 text-slate-800 uppercase text-xs tracking-widest">
-                        <Info className="h-4 w-4 text-slate-500" /> 
-                        Officer's Directives & Instructions
-                      </h4>
-                      <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                        {selectedDrive.remarks}
-                      </p>
-                    </div>
-                  )}
+                    <TabsContent value="eligibility" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
+                      <div className="grid gap-6 sm:grid-cols-3">
+                         <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-200 space-y-3 shadow-sm group">
+                          <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Min CGPA</p>
+                          <p className="font-black text-3xl text-orange-900">{selectedDrive.min_cgpa}</p>
+                        </div>
+                        <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-200 space-y-3 shadow-sm group">
+                          <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Backlogs</p>
+                          <p className="font-black text-3xl text-orange-900">{selectedDrive.max_backlogs}</p>
+                        </div>
+                        <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-200 space-y-3 shadow-sm group">
+                          <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Arrears History</p>
+                          <p className="font-black text-3xl text-orange-900">{selectedDrive.max_history_arrears || 0}</p>
+                        </div>
+                      </div>
 
+                      <div className="bg-slate-50 p-8 rounded-[2rem] border-2 border-dashed border-slate-200 space-y-8">
+                        <div className="flex items-center gap-3">
+                           <div className="h-10 w-10 bg-slate-200 rounded-full flex items-center justify-center text-slate-500 font-black text-xs uppercase shadow-inner">01</div>
+                           <h3 className="text-sm font-black uppercase text-slate-800 tracking-[0.2em]">Academic Benchmarks</h3>
+                        </div>
+                        <div className="grid gap-12 sm:grid-cols-3">
+                          <div className="space-y-1 text-center">
+                            <p className="text-3xl font-black text-slate-400/50 leading-none">10th</p>
+                            <p className="text-lg font-black text-slate-700">{selectedDrive.min_10th_mark}%</p>
+                            <p className="text-[9px] uppercase font-black text-slate-400">Min Threshold</p>
+                          </div>
+                          <div className="space-y-1 text-center">
+                            <p className="text-3xl font-black text-slate-400/50 leading-none">12th</p>
+                            <p className="text-lg font-black text-slate-700">{selectedDrive.min_12th_mark}%</p>
+                            <p className="text-[9px] uppercase font-black text-slate-400">Min Threshold</p>
+                          </div>
+                          <div className="space-y-1 text-center">
+                            <p className="text-3xl font-black text-slate-400/50 leading-none">BATCH</p>
+                            <p className="text-lg font-black text-slate-700">{selectedDrive.eligible_batches || "2021-2025"}</p>
+                            <p className="text-[9px] uppercase font-black text-slate-400">Graduating Cohort</p>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="rounds" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
+                      {selectedDrive.round_details && Array.isArray(selectedDrive.round_details) && selectedDrive.round_details.length > 0 ? (
+                        <div className="bg-purple-50/50 p-6 rounded-[2rem] border border-purple-100 space-y-6">
+                           <h3 className="font-black text-purple-900 flex items-center gap-2 uppercase text-xs tracking-widest px-2">
+                             <ClipboardList className="h-5 w-5" />
+                             Recruitment Roadmap
+                           </h3>
+                           <div className="space-y-4">
+                            {selectedDrive.round_details.map((round: any, idx: number) => (
+                              <div key={idx} className="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm flex gap-5 items-center group transition-all hover:bg-purple-100/20">
+                                <div className="h-12 w-12 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-black text-sm shrink-0 border-2 border-white shadow-sm transition-all group-hover:bg-purple-600 group-hover:text-white group-hover:scale-110">
+                                  {idx + 1}
+                                </div>
+                                <div className="space-y-1 flex-1">
+                                  <p className="font-black text-slate-900 uppercase tracking-tight leading-none text-sm group-hover:text-purple-900">{round.name}</p>
+                                  {round.description && <p className="text-xs text-slate-500 font-medium leading-relaxed group-hover:text-slate-600">{round.description}</p>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50">
+                           <Sparkles className="h-10 w-10 text-slate-200 mb-3" />
+                           <p className="text-sm font-bold text-slate-400 italic">Rounds details will be updated during the Pre-Placement Talk.</p>
+                        </div>
+                      )}
+
+                      {selectedDrive.remarks && (
+                        <div className="bg-slate-900 p-6 rounded-2xl shadow-xl ring-2 ring-slate-800 space-y-4">
+                          <h4 className="font-black flex items-center gap-2 text-white uppercase text-xs tracking-[0.2em] border-b border-white/5 pb-2">
+                            <Info className="h-4 w-4 text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" /> 
+                            Management Briefing
+                          </h4>
+                          <p className="text-xs text-slate-300 leading-relaxed font-bold italic">"{selectedDrive.remarks}"</p>
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+
+                  {/* Scheduled Interview (Contextual for later stages) */}
                   {selectedDrive.applicationStatus === 'interview_scheduled' && selectedDrive.applicationDetails?.interview_timestamp && (
-                    <div className="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-lg ring-1 ring-white/10">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Scheduled Interview Slot</p>
-                      <p className="text-lg text-white font-bold">
+                    <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl relative overflow-hidden group ring-1 ring-white/10">
+                      <div className="absolute top-0 right-0 p-8 opacity-[0.2] transition-transform group-hover:rotate-12">
+                        <Clock className="h-20 w-20 text-white" />
+                      </div>
+                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Live Interview Slot Confirmed
+                      </p>
+                      <p className="text-2xl text-white font-black tracking-tight leading-none mb-1">
                         {new Date(selectedDrive.applicationDetails.interview_timestamp).toLocaleString('en-IN', {
                           dateStyle: 'full',
                           timeStyle: 'short'
                         })}
                       </p>
-                    </div>
-                  )}
-
-                  {(selectedDrive.applicationStatus === 'rejected_by_hod' || selectedDrive.applicationStatus === 'rejected_by_tpo') && (
-                    <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
-                      <p className="text-xs font-bold text-red-800 uppercase mb-1">Feedback from Coordinator</p>
-                      <p className="text-sm text-red-700">
-                        {selectedDrive.applicationDetails?.rejection_reason || "Unfortunately, your application was not selected for this drive by your department coordinator."}
-                      </p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Platform: Campus / Online Portal</p>
                     </div>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
 
-              <DialogFooter className="p-6 bg-muted/20 border-t">
-                <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>Close</Button>
+              <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
                 {!selectedDrive.applicationStatus ? (
                   <Button 
-                    className="bg-primary hover:bg-primary-hover px-8 font-bold"
+                    className="w-full h-12 bg-slate-900 hover:bg-black text-white font-black uppercase tracking-widest rounded-xl shadow-xl transition-all active:scale-[0.98]" 
                     onClick={handleApply}
-                    disabled={isApplying}
+                    disabled={isApplying || (profileLoading)}
                   >
-                    {isApplying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                    Confirm & Apply
-                  </Button>
-                ) : selectedDrive.applicationStatus.includes('rejected') ? (
-                  <Button className="bg-red-600 disabled:opacity-100" disabled>
-                    <AlertCircle className="mr-2 h-4 w-4" /> Application Rejected
+                    {isApplying ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ChevronRight className="mr-2 h-5 w-5" />}
+                    Lock & Apply Selected Opportunity
                   </Button>
                 ) : (
-                  <Button className="bg-emerald-600 disabled:opacity-100" disabled>
-                    <CheckCircle2 className="mr-2 h-4 w-4" /> Application Submitted
+                  <Button className="w-full h-12 bg-slate-100 border border-slate-200 text-slate-400 font-black uppercase tracking-widest rounded-xl cursor-not-allowed pointer-events-none" disabled>
+                    <CheckCircle className="mr-2 h-5 w-5 text-emerald-500" />
+                    Application Locked / Submitted
                   </Button>
                 )}
               </DialogFooter>
