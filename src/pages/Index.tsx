@@ -1,50 +1,32 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
-  Building2,
-  BarChart3,
-  Shield,
-  Users,
-  TrendingUp,
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+
+import {
   CheckCircle2,
   ArrowRight,
   GraduationCap,
 } from "lucide-react";
+import React from "react";
 
-const features = [
-  {
-    icon: Building2,
-    title: "Company Management",
-    description:
-      "Track and manage recruiting companies with complete history, contact details, and visit records.",
-  },
-  {
-    icon: BarChart3,
-    title: "Analytics Dashboard",
-    description:
-      "Real-time insights into placement statistics, department performance, and hiring trends.",
-  },
-  {
-    icon: Shield,
-    title: "Role-Based Access",
-    description:
-      "Secure access control with distinct permissions for TPO, Coordinators, and Management.",
-  },
-  {
-    icon: TrendingUp,
-    title: "Performance Tracking",
-    description:
-      "Monitor placement percentages, PPO conversions, and year-over-year improvements.",
-  },
+const flyerImages = [
+  "/flyers/WhatsApp Image 2026-03-18 at 9.36.31 AM.jpeg",
+  "/flyers/WhatsApp Image 2026-03-18 at 9.36.31 AM (1).jpeg",
+  "/flyers/WhatsApp Image 2026-03-18 at 9.36.30 AM.jpeg",
+  "/flyers/WhatsApp Image 2026-03-18 at 9.36.30 AM (1).jpeg",
+  "/flyers/WhatsApp Image 2026-03-18 at 9.36.30 AM (2).jpeg",
+  "/flyers/WhatsApp Image 2026-03-18 at 9.36.30 AM (3).jpeg",
 ];
 
-const stats = [
-  { value: "500+", label: "Companies Tracked" },
-  { value: "95%", label: "Placement Rate" },
-  { value: "15+", label: "Departments" },
-  { value: "10000+", label: "Students Placed" },
-];
+
+
+
 
 export default function Index() {
   return (
@@ -59,12 +41,8 @@ export default function Index() {
             <span className="text-xl font-bold">ERODE SENGUNTHAR ENGINEERING COLLEGE</span>
           </div>
           <nav className="hidden md:flex items-center gap-6">
-            <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-orange-600 transition-colors">
-              Features
-            </a>
-            <a href="#stats" className="text-sm font-medium text-muted-foreground hover:text-orange-600 transition-colors">
-              Statistics
-            </a>
+
+
           </nav>
           <div className="flex items-center gap-4">
             <Button variant="ghost" asChild className="hover:text-orange-600 hover:bg-orange-50">
@@ -116,14 +94,7 @@ export default function Index() {
                   <ArrowRight className="ml-2 h-6 w-6" />
                 </Link>
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                asChild
-                className="w-full sm:w-auto border-2 border-white/20 text-white hover:bg-white/10 hover:text-white bg-transparent text-lg px-8 py-6 h-auto backdrop-blur-sm"
-              >
-                <a href="#features">Learn More</a>
-              </Button>
+
             </div>
           </div>
         </div>
@@ -143,150 +114,43 @@ export default function Index() {
         />
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-24">
-        <div className="container">
-          <div className="mx-auto mb-16 max-w-2xl text-center">
-            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-              Everything you need to manage placements
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              A complete suite of tools designed for placement cells, HODs,
-              and management teams.
+      {/* Flyers Carousel Section */}
+      <section className="py-16 bg-muted/30">
+        <div className="container px-4 md:px-6">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Recent Events & Highlights</h2>
+            <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl mt-4">
+              Explore our college life and recent placement achievements.
             </p>
           </div>
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature, index) => (
-              <Card key={index} className="card-hover border-0 bg-card shadow-premium hover:shadow-orange-100">
-                <CardContent className="p-6">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100">
-                    <feature.icon className="h-6 w-6 text-orange-600" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="relative max-w-5xl mx-auto px-12">
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              className="w-full"
+            >
+              <CarouselContent>
+                {flyerImages.map((src, index) => (
+                  <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3 p-2">
+                    <div className="overflow-hidden rounded-xl border bg-background shadow-lg transition-all hover:scale-[1.02]">
+                      <img
+                        src={src}
+                        alt={`Flyer ${index + 1}`}
+                        className="aspect-[3/4] w-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="absolute -left-12 h-12 w-12 border-orange-500 text-orange-600 hover:bg-orange-50" />
+              <CarouselNext className="absolute -right-12 h-12 w-12 border-orange-500 text-orange-600 hover:bg-orange-50" />
+            </Carousel>
           </div>
         </div>
       </section>
-
-      {/* Roles Section */}
-      <section className="border-t bg-orange-50/50 py-24">
-        <div className="container">
-          <div className="mx-auto mb-16 max-w-2xl text-center">
-            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-              Designed for every role
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Role-based access ensures everyone sees exactly what they need.
-            </p>
-          </div>
-          <div className="grid gap-8 md:grid-cols-3">
-            <Card className="relative overflow-hidden border-0 bg-card shadow-premium hover:shadow-orange-200 transition-all">
-              <div className="absolute right-0 top-0 h-32 w-32 rounded-bl-full bg-orange-100" />
-              <CardContent className="p-8">
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-orange-500 text-white">
-                  <Users className="h-7 w-7" />
-                </div>
-                <h3 className="mb-2 text-xl font-semibold">Placement Officer</h3>
-                <p className="mb-4 text-muted-foreground">
-                  Full administrative control over companies, drives, and statistics.
-                </p>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-orange-500" />
-                    Manage company database
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-orange-500" />
-                    Schedule placement drives
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-orange-500" />
-                    Generate reports
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden border-0 bg-card shadow-premium hover:shadow-green-200 transition-all">
-              <div className="absolute right-0 top-0 h-32 w-32 rounded-bl-full bg-green-100" />
-              <CardContent className="p-8">
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-green-600 text-white">
-                  <GraduationCap className="h-7 w-7" />
-                </div>
-                <h3 className="mb-2 text-xl font-semibold">HOD</h3>
-                <p className="mb-4 text-muted-foreground">
-                  Department-scoped view with relevant drives and statistics.
-                </p>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    View department drives
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    Track student placements
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    Department analytics
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden border-0 bg-card shadow-premium hover:shadow-yellow-200 transition-all">
-              <div className="absolute right-0 top-0 h-32 w-32 rounded-bl-full bg-yellow-100" />
-              <CardContent className="p-8">
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-yellow-500 text-white">
-                  <TrendingUp className="h-7 w-7" />
-                </div>
-                <h3 className="mb-2 text-xl font-semibold">Management</h3>
-                <p className="mb-4 text-muted-foreground">
-                  Executive dashboard with KPIs and institutional insights.
-                </p>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-yellow-600" />
-                    View all analytics
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-yellow-600" />
-                    Department comparisons
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-yellow-600" />
-                    Year-over-year trends
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 py-24">
-        <div className="container">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="mb-4 text-3xl font-bold tracking-tight text-white md:text-4xl">
-              Ready to transform your placement process?
-            </h2>
-            <p className="mb-8 text-lg text-white/90">
-              Join institutions that have streamlined their placement management with ESEC.
-            </p>
-            <Button size="lg" asChild className="bg-white text-orange-600 hover:bg-white/90 shadow-xl">
-              <Link to="/auth?tab=signup">
-                Get Started Today
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {/* Footer - Detailed */}
       <footer className="bg-[#333333] text-white  py-16">
         <div className="container">
