@@ -35,20 +35,30 @@ export default function QRScanner() {
     }
 
     if (scanning) {
-      const scanner = new Html5QrcodeScanner(
-        "qr-reader",
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        false
-      );
-
-      scanner.render(onScanSuccess, (err) => {
-        // Log errors only if they are not the "No QR code found" error
-        if (!err.includes("No QR code found")) {
-           console.warn("Scanner Status:", err);
+      // Delay slightly to ensure DOM is rendered
+      const timer = setTimeout(() => {
+        const element = document.getElementById("qr-reader");
+        if (!element) {
+          console.warn("Scanner container 'qr-reader' not found in DOM yet.");
+          return;
         }
-      });
 
-      scannerRef.current = scanner;
+        const scanner = new Html5QrcodeScanner(
+          "qr-reader",
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          false
+        );
+
+        scanner.render(onScanSuccess, (err) => {
+          if (!err.includes("No QR code found")) {
+             console.warn("Scanner Status:", err);
+          }
+        });
+
+        scannerRef.current = scanner;
+      }, 100);
+
+      return () => clearTimeout(timer);
     }
 
     return () => {
