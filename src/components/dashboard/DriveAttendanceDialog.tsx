@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, CheckCircle2, XCircle, User, Search } from "lucide-react";
+import { Loader2, Download, CheckCircle2, XCircle, User, Search, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
@@ -30,6 +30,7 @@ interface DriveAttendanceDialogProps {
 
 export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyName }: DriveAttendanceDialogProps) {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -41,13 +42,15 @@ export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyNa
 
   const fetchAttendance = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data, error } = await supabase
         .rpc('get_drive_attendance' as any, { p_drive_id: driveId });
 
       if (error) {
         console.error('Attendance fetch error:', error);
-        throw error;
+        setError('Failed to load attendance');
+        return;
       }
 
       const combined = (data as any[] || []).map((student: any) => ({
@@ -62,7 +65,7 @@ export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyNa
 
       setStudents(combined);
     } catch (err: any) {
-      toast.error("Failed to load attendance: " + err.message);
+      setError(err.message || "Failed to load attendance");
     } finally {
       setLoading(false);
     }
@@ -164,8 +167,19 @@ export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyNa
             </Button>
           </div>
 
-          {/* Attendance Table */}
-          {loading ? (
+          {/* Conditional UI */}
+          {error ? (
+            <div className="flex flex-col items-center justify-center py-20 border-4 border-dashed border-red-100 rounded-[3rem] bg-red-50/50 text-red-600 gap-4">
+              <AlertCircle className="h-16 w-16" />
+              <div className="text-center">
+                <h3 className="text-xl font-black uppercase tracking-tight">Sync Failure</h3>
+                <p className="text-sm font-medium">{error}</p>
+              </div>
+              <Button onClick={fetchAttendance} variant="outline" className="border-red-600 hover:bg-red-600 hover:text-white rounded-xl font-black uppercase text-[10px] tracking-widest h-10 px-8">
+                Try Re-syncing
+              </Button>
+            </div>
+          ) : loading ? (
             <div className="flex h-64 items-center justify-center flex-col gap-4">
               <Loader2 className="h-10 w-10 animate-spin text-slate-900" />
               <p className="text-xs font-black text-slate-400 uppercase tracking-widest animate-pulse">Syncing Records...</p>
