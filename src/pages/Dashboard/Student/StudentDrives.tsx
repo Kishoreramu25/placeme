@@ -56,16 +56,43 @@ export default function StudentDrives() {
   const { data: drives, isLoading: drivesLoading } = useQuery({
     queryKey: ["student-eligible-drives", user?.id, profile?.id],
     queryFn: async () => {
-      // 1. Fetch student profile from students_master
+      // 1. Fetch full student profile for eligibility validation
       const { data: studentProfile } = await supabase
         .from('students_master')
-        .select('id, department_id, approval_status, resume_url')
+        .select(`
+          id, 
+          department_id, 
+          approval_status, 
+          resume_url,
+          overall_cgpa,
+          current_backlogs,
+          history_of_arrears_count,
+          percentage_10th,
+          percentage_12th,
+          batches
+        `)
         .eq('id', user?.id)
         .single();
 
       if (!studentProfile || studentProfile.approval_status !== 'approved_by_tpo') {
         return [];
       }
+
+      // Helper to parse string metrics to numbers safely
+      const parseMetric = (val: any) => {
+        if (!val) return 0;
+        const clean = String(val).replace(/[^0-9.]/g, '');
+        return clean ? parseFloat(clean) : 0;
+      };
+
+      const studentMetrics = {
+        cgpa: parseMetric(studentProfile.overall_cgpa),
+        backlogs: parseMetric(studentProfile.current_backlogs),
+        historyArrears: parseMetric(studentProfile.history_of_arrears_count),
+        mark10: parseMetric(studentProfile.percentage_10th),
+        mark12: parseMetric(studentProfile.percentage_12th),
+        batch: studentProfile.batches?.trim()
+      };
 
       // 2. Fetch all applications for this student to check current status
       const { data: studentApplications } = await supabase
@@ -116,6 +143,7 @@ export default function StudentDrives() {
           remarks,
           status,
           round_details,
+          eligible_batches,
           companies (name),
           drive_eligible_departments (department_id)
         `)
@@ -125,8 +153,23 @@ export default function StudentDrives() {
 
       if (driveError) throw driveError;
 
-      // 5. Map applications to drives
-      return ((allDrives as any) || []).map((drive: any) => {
+      // 5. Filter for eligibility and map applications
+      return ((allDrives as any) || []).filter((drive: any) => {
+        // Eligibility Logic
+        if (drive.min_cgpa && studentMetrics.cgpa < drive.min_cgpa) return false;
+        if (drive.max_backlogs !== null && studentMetrics.backlogs > drive.max_backlogs) return false;
+        if (drive.max_history_arrears !== null && studentMetrics.historyArrears > drive.max_history_arrears) return false;
+        if (drive.min_10th_mark && studentMetrics.mark10 < drive.min_10th_mark) return false;
+        if (drive.min_12th_mark && studentMetrics.mark12 < drive.min_12th_mark) return false;
+        
+        // Batch check
+        if (drive.eligible_batches && studentMetrics.batch) {
+          const driveBatches = drive.eligible_batches.split(',').map((b: string) => b.trim());
+          if (!driveBatches.includes(studentMetrics.batch)) return false;
+        }
+
+        return true;
+      }).map((drive: any) => {
         const application = appMap.get(drive.id);
         return {
           ...drive,
@@ -195,7 +238,7 @@ export default function StudentDrives() {
   return (
     <div className="space-y-6">
       {!profile && !profileLoading && (
-        <div className="flex items-center gap-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800">
+        <div className="flex items-center gap-4 p-4 bg-amber-50 border border-amber-200 rounded-none text-amber-800">
           <AlertCircle className="h-5 w-5 shrink-0" />
           <div className="flex-1 text-sm">
             <p className="font-bold">Master Profile Not Found</p>
@@ -220,7 +263,7 @@ export default function StudentDrives() {
           <Card key={drive.id} className="flex flex-col border-primary/10 hover:shadow-premium transition-all">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
-                <div className="bg-primary/10 p-2 rounded-lg">
+                <div className="bg-primary/10 p-2 rounded-none">
                   <Building2 className="h-6 w-6 text-primary" />
                 </div>
                 {drive.applicationStatus ? (
@@ -273,7 +316,7 @@ export default function StudentDrives() {
       </div>
 
       {(!drives || drives.length === 0) && (
-        <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-xl bg-muted/30">
+        <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-none bg-muted/30">
           <AlertCircle className="h-12 w-12 text-muted-foreground/50 mb-4" />
           <h3 className="font-bold text-xl">No drives found</h3>
           <p className="text-muted-foreground">New placement drives will appear here soon.</p>
@@ -282,13 +325,13 @@ export default function StudentDrives() {
 
       {/* Drive Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
+        <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-none">
           {selectedDrive && (
             <>
               <div className="bg-primary/10 px-6 py-5 border-b border-primary/20 bg-gradient-to-r from-primary/5 to-transparent shrink-0">
                 <DialogHeader>
                   <div className="flex items-center gap-4">
-                    <div className="bg-white p-3 rounded-2xl text-primary shadow-sm border border-primary/10">
+                    <div className="bg-white p-3 rounded-none text-primary shadow-sm border border-primary/10">
                       <Building2 className="h-8 w-8" />
                     </div>
                     <div>
@@ -316,20 +359,20 @@ export default function StudentDrives() {
                   )}
 
                   <Tabs defaultValue="basic" className="w-full">
-                    <TabsList className="grid w-full grid-cols-4 h-14 bg-slate-100 p-1.5 rounded-2xl mb-8 shadow-inner border border-slate-200">
-                      <TabsTrigger value="basic" className="rounded-xl gap-2.5 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
+                    <TabsList className="grid w-full grid-cols-4 h-14 bg-slate-100 p-1.5 rounded-none mb-8 shadow-inner border border-slate-200">
+                      <TabsTrigger value="basic" className="rounded-none gap-2.5 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
                         <Info className="h-3.5 w-3.5" />
                         Details
                       </TabsTrigger>
-                      <TabsTrigger value="job" className="rounded-xl gap-2.5 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
+                      <TabsTrigger value="job" className="rounded-none gap-2.5 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
                         <Briefcase className="h-3.5 w-3.5" />
                         Job
                       </TabsTrigger>
-                      <TabsTrigger value="eligibility" className="rounded-xl gap-2.5 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
+                      <TabsTrigger value="eligibility" className="rounded-none gap-2.5 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
                         <Target className="h-3.5 w-3.5" />
                         Eligibility
                       </TabsTrigger>
-                      <TabsTrigger value="rounds" className="rounded-xl gap-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
+                      <TabsTrigger value="rounds" className="rounded-none gap-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black text-[10px] uppercase tracking-wider">
                         <ClipboardList className="h-3.5 w-3.5" />
                         Rounds
                       </TabsTrigger>
@@ -337,17 +380,17 @@ export default function StudentDrives() {
 
                     <TabsContent value="basic" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
                       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                         <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl relative shadow-sm overflow-hidden group">
+                         <div className="p-4 bg-slate-50 border border-slate-200 rounded-none relative shadow-sm overflow-hidden group">
                            <div className="absolute top-0 right-0 p-4 opacity-[0.05] group-hover:scale-110 transition-transform"><Calendar className="h-8 w-8" /></div>
                            <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Drive Date</p>
                            <p className="font-bold text-slate-800">{new Date(selectedDrive.visit_date).toLocaleDateString('en-IN', { dateStyle: 'full' })}</p>
                         </div>
-                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl relative shadow-sm overflow-hidden group">
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-none relative shadow-sm overflow-hidden group">
                            <div className="absolute top-0 right-0 p-4 opacity-[0.05] group-hover:scale-110 transition-transform"><MapPin className="h-8 w-8" /></div>
                            <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Base Location</p>
                            <p className="font-bold text-slate-800">{selectedDrive.work_location || "Not Specified"}</p>
                         </div>
-                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl relative shadow-sm overflow-hidden group">
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-none relative shadow-sm overflow-hidden group">
                            <div className="absolute top-0 right-0 p-4 opacity-[0.05] group-hover:scale-110 transition-transform"><Globe className="h-8 w-8" /></div>
                            <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Visit Mode</p>
                            <p className="font-bold text-slate-800 uppercase tracking-tight">{selectedDrive.visit_mode.replace(/_/g, ' ')}</p>
@@ -355,7 +398,7 @@ export default function StudentDrives() {
                       </div>
 
                       <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4 shadow-sm">
+                        <div className="bg-slate-50 p-6 rounded-none border border-slate-200 space-y-4 shadow-sm">
                            <h3 className="font-black flex items-center gap-2 text-slate-800 uppercase text-xs tracking-wider">
                             <Clock className="h-4 w-4 text-primary" />
                             Timeline Information
@@ -373,7 +416,7 @@ export default function StudentDrives() {
                         </div>
 
                         {(selectedDrive.company_website || selectedDrive.company_linkedin || selectedDrive.other_links) && (
-                          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4 shadow-sm">
+                          <div className="bg-slate-50 p-6 rounded-none border border-slate-200 space-y-4 shadow-sm">
                              <h3 className="font-black flex items-center gap-2 text-slate-800 uppercase text-xs tracking-wider">
                               <Globe className="h-4 w-4 text-primary" />
                               Official Links
@@ -402,22 +445,22 @@ export default function StudentDrives() {
 
                     <TabsContent value="job" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
                       <div className="grid gap-6 sm:grid-cols-2">
-                         <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100 flex items-center justify-between shadow-sm">
+                         <div className="bg-emerald-50/50 p-6 rounded-none border border-emerald-100 flex items-center justify-between shadow-sm">
                             <div className="space-y-1">
                                <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Placement CTC</p>
                                <p className="text-2xl font-black text-emerald-900 leading-none">₹{selectedDrive.ctc_amount >= 1000 ? (selectedDrive.ctc_amount / 100000).toFixed(1) : selectedDrive.ctc_amount} LPA</p>
                             </div>
-                            <div className="h-12 w-12 bg-white rounded-xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
+                            <div className="h-12 w-12 bg-white rounded-none flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
                                <DollarSign className="h-6 w-6" />
                             </div>
                          </div>
                          {selectedDrive.stipend_amount && (
-                           <div className="bg-emerald-900/5 p-6 rounded-2xl border border-emerald-100 flex items-center justify-between shadow-sm">
+                           <div className="bg-emerald-900/5 p-6 rounded-none border border-emerald-100 flex items-center justify-between shadow-sm">
                               <div className="space-y-1">
                                  <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Monthly Stipend</p>
                                  <p className="text-2xl font-black text-emerald-900 leading-none">₹{selectedDrive.stipend_amount.toLocaleString()}</p>
                               </div>
-                              <div className="h-12 w-12 bg-white rounded-xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
+                              <div className="h-12 w-12 bg-white rounded-none flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
                                  <Sparkles className="h-6 w-6" />
                               </div>
                            </div>
@@ -430,17 +473,17 @@ export default function StudentDrives() {
                              <Briefcase className="h-4 w-4 text-emerald-600" />
                              Job Description & Candidate Responsibilities
                           </Label>
-                          <div className="p-6 bg-white rounded-3xl border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed shadow-inner min-h-[140px]">
+                          <div className="p-6 bg-white rounded-none border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed shadow-inner min-h-[140px]">
                             {selectedDrive.job_description || "Detailed requirements as specified by the organization will be briefed during the session."}
                           </div>
                         </div>
 
                         <div className="grid gap-6 sm:grid-cols-2">
-                           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                           <div className="bg-slate-50 p-5 rounded-none border border-slate-200">
                               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Service Policy</h4>
                               <p className="text-sm font-bold text-slate-800">{selectedDrive.bond_details || "No Service Agreement Mentioned"}</p>
                            </div>
-                           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                           <div className="bg-slate-50 p-5 rounded-none border border-slate-200">
                               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Classification</h4>
                               <p className="text-sm font-black text-emerald-600 uppercase italic tracking-tight">{selectedDrive.drive_type} Opportunity</p>
                            </div>
@@ -450,23 +493,23 @@ export default function StudentDrives() {
 
                     <TabsContent value="eligibility" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
                       <div className="grid gap-6 sm:grid-cols-3">
-                         <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-200 space-y-3 shadow-sm group">
+                         <div className="bg-orange-50/50 p-6 rounded-none border border-orange-200 space-y-3 shadow-sm group">
                           <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Min CGPA</p>
                           <p className="font-black text-3xl text-orange-900">{selectedDrive.min_cgpa}</p>
                         </div>
-                        <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-200 space-y-3 shadow-sm group">
+                        <div className="bg-orange-50/50 p-6 rounded-none border border-orange-200 space-y-3 shadow-sm group">
                           <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Backlogs</p>
                           <p className="font-black text-3xl text-orange-900">{selectedDrive.max_backlogs}</p>
                         </div>
-                        <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-200 space-y-3 shadow-sm group">
+                        <div className="bg-orange-50/50 p-6 rounded-none border border-orange-200 space-y-3 shadow-sm group">
                           <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Arrears History</p>
                           <p className="font-black text-3xl text-orange-900">{selectedDrive.max_history_arrears || 0}</p>
                         </div>
                       </div>
 
-                      <div className="bg-slate-50 p-8 rounded-[2rem] border-2 border-dashed border-slate-200 space-y-8">
+                      <div className="bg-slate-50 p-8 rounded-none border-2 border-dashed border-slate-200 space-y-8">
                         <div className="flex items-center gap-3">
-                           <div className="h-10 w-10 bg-slate-200 rounded-full flex items-center justify-center text-slate-500 font-black text-xs uppercase shadow-inner">01</div>
+                           <div className="h-10 w-10 bg-slate-200 rounded-none flex items-center justify-center text-slate-500 font-black text-xs uppercase shadow-inner">01</div>
                            <h3 className="text-sm font-black uppercase text-slate-800 tracking-[0.2em]">Academic Benchmarks</h3>
                         </div>
                         <div className="grid gap-12 sm:grid-cols-3">
@@ -491,15 +534,15 @@ export default function StudentDrives() {
 
                     <TabsContent value="rounds" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
                       {selectedDrive.round_details && Array.isArray(selectedDrive.round_details) && selectedDrive.round_details.length > 0 ? (
-                        <div className="bg-purple-50/50 p-6 rounded-[2rem] border border-purple-100 space-y-6">
+                        <div className="bg-purple-50/50 p-6 rounded-none border border-purple-100 space-y-6">
                            <h3 className="font-black text-purple-900 flex items-center gap-2 uppercase text-xs tracking-widest px-2">
                              <ClipboardList className="h-5 w-5" />
                              Recruitment Roadmap
                            </h3>
                            <div className="space-y-4">
                             {selectedDrive.round_details.map((round: any, idx: number) => (
-                              <div key={idx} className="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm flex gap-5 items-center group transition-all hover:bg-purple-100/20">
-                                <div className="h-12 w-12 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-black text-sm shrink-0 border-2 border-white shadow-sm transition-all group-hover:bg-purple-600 group-hover:text-white group-hover:scale-110">
+                              <div key={idx} className="bg-white p-5 rounded-none border border-purple-100 shadow-sm flex gap-5 items-center group transition-all hover:bg-purple-100/20">
+                                <div className="h-12 w-12 rounded-none bg-purple-100 text-purple-700 flex items-center justify-center font-black text-sm shrink-0 border-2 border-white shadow-sm transition-all group-hover:bg-purple-600 group-hover:text-white group-hover:scale-110">
                                   {idx + 1}
                                 </div>
                                 <div className="space-y-1 flex-1">
@@ -511,14 +554,14 @@ export default function StudentDrives() {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50">
+                        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-slate-200 rounded-none bg-slate-50">
                            <Sparkles className="h-10 w-10 text-slate-200 mb-3" />
                            <p className="text-sm font-bold text-slate-400 italic">Rounds details will be updated during the Pre-Placement Talk.</p>
                         </div>
                       )}
 
                       {selectedDrive.remarks && (
-                        <div className="bg-slate-900 p-6 rounded-2xl shadow-xl ring-2 ring-slate-800 space-y-4">
+                        <div className="bg-slate-900 p-6 rounded-none shadow-xl ring-2 ring-slate-800 space-y-4">
                           <h4 className="font-black flex items-center gap-2 text-white uppercase text-xs tracking-[0.2em] border-b border-white/5 pb-2">
                             <Info className="h-4 w-4 text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" /> 
                             Management Briefing
@@ -530,7 +573,7 @@ export default function StudentDrives() {
                   </Tabs>
 
                   {selectedDrive.applicationStatus === 'approved_by_tpo' && (
-                    <div className="p-8 bg-black rounded-3xl shadow-2xl relative overflow-hidden group border border-white/10 flex flex-col items-center gap-6">
+                    <div className="p-8 bg-black rounded-none shadow-2xl relative overflow-hidden group border border-white/10 flex flex-col items-center gap-6">
                       <div className="absolute top-0 right-0 p-8 opacity-[0.1] transition-transform group-hover:rotate-12">
                         <QrCode className="h-24 w-24 text-white" />
                       </div>
@@ -543,7 +586,7 @@ export default function StudentDrives() {
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Show this to the invigilator on drive day</p>
                       </div>
 
-                      <div className="p-4 bg-white rounded-2xl shadow-premium animate-in zoom-in-95 duration-500">
+                      <div className="p-4 bg-white rounded-none shadow-premium animate-in zoom-in-95 duration-500">
                         <QRCode
                           value={`${window.location.origin}/attend?student_id=${user?.id}&drive_id=${selectedDrive.id}`}
                           size={180}
@@ -561,7 +604,7 @@ export default function StudentDrives() {
 
                   {/* Scheduled Interview (Contextual for later stages) */}
                   {selectedDrive.applicationStatus === 'interview_scheduled' && selectedDrive.applicationDetails?.interview_timestamp && (
-                    <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl relative overflow-hidden group ring-1 ring-white/10">
+                    <div className="p-6 bg-slate-900 border border-slate-800 rounded-none shadow-2xl relative overflow-hidden group ring-1 ring-white/10">
                       <div className="absolute top-0 right-0 p-8 opacity-[0.2] transition-transform group-hover:rotate-12">
                         <Clock className="h-20 w-20 text-white" />
                       </div>
@@ -584,7 +627,7 @@ export default function StudentDrives() {
               <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
                 {!selectedDrive.applicationStatus ? (
                   <Button 
-                    className="w-full h-12 bg-slate-900 hover:bg-black text-white font-black uppercase tracking-widest rounded-xl shadow-xl transition-all active:scale-[0.98]" 
+                    className="w-full h-12 bg-slate-900 hover:bg-black text-white font-black uppercase tracking-widest rounded-none shadow-xl transition-all active:scale-[0.98]" 
                     onClick={handleApply}
                     disabled={isApplying || (profileLoading)}
                   >
@@ -592,7 +635,7 @@ export default function StudentDrives() {
                     Lock & Apply Selected Opportunity
                   </Button>
                 ) : (
-                  <Button className="w-full h-12 bg-slate-100 border border-slate-200 text-slate-400 font-black uppercase tracking-widest rounded-xl cursor-not-allowed pointer-events-none" disabled>
+                  <Button className="w-full h-12 bg-slate-100 border border-slate-200 text-slate-400 font-black uppercase tracking-widest rounded-none cursor-not-allowed pointer-events-none" disabled>
                     <CheckCircle className="mr-2 h-5 w-5 text-emerald-500" />
                     Application Locked / Submitted
                   </Button>
@@ -606,7 +649,7 @@ export default function StudentDrives() {
       <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
         <DialogContent className="max-w-md p-8 text-center space-y-6">
           <div className="flex flex-col items-center">
-            <div className="h-20 w-20 rounded-full bg-slate-900 flex items-center justify-center mb-6 shadow-xl ring-4 ring-slate-100">
+            <div className="h-20 w-20 rounded-none bg-slate-900 flex items-center justify-center mb-6 shadow-xl ring-4 ring-slate-100">
                <CheckCircle2 className="h-10 w-10 text-white" />
             </div>
             <DialogTitle className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-2">
@@ -617,7 +660,7 @@ export default function StudentDrives() {
             </DialogDescription>
           </div>
 
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-none space-y-1">
              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Company Identified</p>
              <p className="font-bold text-slate-800">{selectedDrive?.companies?.name}</p>
              <p className="text-xs text-slate-500">{selectedDrive?.role_offered}</p>
@@ -627,14 +670,14 @@ export default function StudentDrives() {
              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3">Next Steps in Selection</h4>
              <div className="space-y-3">
                 <div className="flex items-start gap-4">
-                   <div className="h-5 w-5 rounded-full border border-slate-900 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</div>
+                   <div className="h-5 w-5 rounded-none border border-slate-900 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</div>
                    <div className="space-y-0.5">
                       <p className="text-xs font-bold text-slate-800 leading-none">HOD Verification</p>
                       <p className="text-[10px] text-slate-500">Department head will verify your primary eligibility.</p>
                    </div>
                 </div>
                 <div className="flex items-start gap-4">
-                   <div className="h-5 w-5 rounded-full border border-slate-200 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 text-slate-400">2</div>
+                   <div className="h-5 w-5 rounded-none border border-slate-200 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 text-slate-400">2</div>
                    <div className="space-y-0.5">
                       <p className="text-xs font-bold text-slate-400 leading-none">TPO Review</p>
                       <p className="text-[10px] text-slate-400">Placement cell will finalize your application for shortlisting.</p>

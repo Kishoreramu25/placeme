@@ -341,7 +341,7 @@ export default function StudentProfile() {
             Fill Demo Data (Testing)
           </Button>
 
-          <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm ${
+          <div className={`px-4 py-2 rounded-none text-[10px] font-black uppercase tracking-widest shadow-sm ${
             status === 'approved_by_tpo' ? 'bg-green-100 text-green-700 border border-green-200' :
             status === 'approved_by_hod' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
             status === 'rejected' ? 'bg-red-100 text-red-700 border border-red-200' :
@@ -362,7 +362,7 @@ export default function StudentProfile() {
          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4 divide-x divide-slate-200">
                <div className="flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                  <div className="h-1.5 w-1.5 rounded-none bg-primary animate-pulse" />
                   <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 shrink-0">Dossier Integrity</span>
                   <span className="text-xs font-black text-slate-900 leading-none">
                      {Math.round((
@@ -399,7 +399,7 @@ export default function StudentProfile() {
                       watch("mother_name"), watch("communication_door_street"), watch("communication_pincode")
                     ].filter(v => v && v.toString().trim().length > 0).length / 35
                   ) * 100} 
-                  className="h-1 bg-slate-100 rounded-full" 
+                  className="h-1 bg-slate-100 rounded-none" 
                />
             </div>
          </div>
@@ -457,7 +457,7 @@ export default function StudentProfile() {
                       <Label>Gender</Label>
                       <select 
                         {...register("gender")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Gender</option>
                         <option value="Male">Male</option>
@@ -471,7 +471,7 @@ export default function StudentProfile() {
                       <Label>Blood Group</Label>
                       <select 
                         {...register("blood_group")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Blood Group</option>
                         <option value="A+">A+</option>
@@ -489,7 +489,7 @@ export default function StudentProfile() {
                       <Label>Marital Status</Label>
                       <select 
                         {...register("marital_status")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Status</option>
                         <option value="Single">Single</option>
@@ -532,7 +532,7 @@ export default function StudentProfile() {
                       <Label>Do you have a Passport?</Label>
                       <select 
                         {...register("passport_available")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select status</option>
                         <option value="NO">NO</option>
@@ -552,7 +552,7 @@ export default function StudentProfile() {
                       <Label>Nationality</Label>
                       <select 
                         {...register("nationality")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <option value="">Select Nationality</option>
                         <option value="INDIA">INDIA</option>
@@ -564,7 +564,7 @@ export default function StudentProfile() {
                       {nationality === "INDIA" ? (
                         <select 
                           {...register("state")}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <option value="">Select State</option>
                           {INDIA_STATES.map(s => <option key={s} value={s.toUpperCase()}>{s.toUpperCase()}</option>)}
@@ -578,7 +578,7 @@ export default function StudentProfile() {
                       {state === "TAMIL NADU" ? (
                         <select 
                           {...register("district")}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <option value="">Select District</option>
                           {TN_DISTRICTS.map(d => <option key={d} value={d.toUpperCase()}>{d.toUpperCase()}</option>)}
@@ -599,7 +599,7 @@ export default function StudentProfile() {
                       <Label>Community</Label>
                       <select 
                         {...register("community")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Community</option>
                         <option value="OC">OC</option>
@@ -647,7 +647,7 @@ export default function StudentProfile() {
                        <Label>10th Board</Label>
                        <select 
                          {...register("board_10th")}
-                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                         className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                        >
                          <option value="">Select Board</option>
                          <option value="State Board">State Board</option>
@@ -674,7 +674,7 @@ export default function StudentProfile() {
                        <Label>12th Board</Label>
                        <select 
                          {...register("board_12th")}
-                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                         className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                        >
                          <option value="">Select Board</option>
                          <option value="State Board">State Board</option>
@@ -689,7 +689,7 @@ export default function StudentProfile() {
                       <Label>Any Diploma studied after 10th/12th?</Label>
                       <select 
                         {...register("diploma_studied")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select option</option>
                         <option value="YES">YES</option>
@@ -709,14 +709,14 @@ export default function StudentProfile() {
                       </>
                     )}
 
-                    <div className="space-y-4 md:col-span-2 border-slate-100 bg-slate-50/50 p-6 rounded-2xl border">
+                    <div className="space-y-4 md:col-span-2 border-slate-100 bg-slate-50/50 p-6 rounded-none border">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="space-y-1">
                           <Label className="text-base font-bold text-slate-900">Any Professional Work Experience?</Label>
                         </div>
                         <select 
                           {...register("has_work_experience")}
-                          className="flex h-12 w-full md:w-40 rounded-xl border border-input bg-white px-3 py-2 text-sm font-bold shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="flex h-12 w-full md:w-40 rounded-none border border-input bg-white px-3 py-2 text-sm font-bold shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <option value="NO">NO</option>
                           <option value="YES">YES</option>
@@ -732,7 +732,7 @@ export default function StudentProfile() {
                           <textarea
                             {...register("work_experience")}
                             rows={4}
-                            className="flex w-full rounded-2xl border border-input bg-white px-4 py-3 text-sm font-medium shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring placeholder:text-slate-400 leading-relaxed"
+                            className="flex w-full rounded-none border border-input bg-white px-4 py-3 text-sm font-medium shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring placeholder:text-slate-400 leading-relaxed"
                             placeholder="Describe your role, company, and key achievements in a professional manner..."
                           />
                         </div>
@@ -744,7 +744,7 @@ export default function StudentProfile() {
                       <Label>Current Year</Label>
                       <select 
                         {...register("current_year")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Year</option>
                         <option value="1">1st Year</option>
@@ -760,7 +760,7 @@ export default function StudentProfile() {
                         <Label>Current Semester</Label>
                         <select 
                           {...register("current_semester")}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <option value="">Select Semester</option>
                           <option value="1">1</option>
@@ -799,7 +799,7 @@ export default function StudentProfile() {
                       <Label>Any Arrears?</Label>
                       <select 
                         {...register("current_standing_arrear")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-w-xs"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-w-xs"
                       >
                         <option value="">Select</option>
                         <option value="NO">NO ARREARS</option>
@@ -896,7 +896,7 @@ export default function StudentProfile() {
                       <Label>Department / Branch</Label>
                       <select 
                         {...register("degree_branches")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Department</option>
                         <option value="Civil Engineering">Civil Engineering</option>
@@ -939,7 +939,7 @@ export default function StudentProfile() {
                       <Label>Quota</Label>
                       <select 
                         {...register("quota")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Quota</option>
                         <option value="Government">Government (Counseling)</option>
@@ -953,7 +953,7 @@ export default function StudentProfile() {
                       <Label>Medium</Label>
                       <select 
                         {...register("medium")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Medium</option>
                         <option value="English">English</option>
@@ -965,7 +965,7 @@ export default function StudentProfile() {
                       <Label>Mode of Education</Label>
                       <select 
                         {...register("mode_of_education")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Mode</option>
                         <option value="Regular">Regular / Full-Time</option>
@@ -978,7 +978,7 @@ export default function StudentProfile() {
                       <Label>Mode of Admission</Label>
                       <select 
                         {...register("mode_of_admission")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Mode</option>
                         <option value="CQ">CQ (Counseling Quota)</option>
@@ -991,7 +991,7 @@ export default function StudentProfile() {
                       <Label>Student Status</Label>
                       <select 
                         {...register("student_status")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Status</option>
                         <option value="Active">Active (Studying)</option>
@@ -1006,7 +1006,7 @@ export default function StudentProfile() {
                       <Label>Hosteller / Day Scholar</Label>
                       <select 
                         {...register("is_hosteller")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Option</option>
                         <option value="Hosteller">Hosteller</option>
@@ -1032,12 +1032,12 @@ export default function StudentProfile() {
                   </CardHeader>
                   <CardContent className="grid gap-6 md:grid-cols-2 pt-6">
                     
-                    <div className="space-y-4 md:col-span-2 bg-primary/5 p-4 rounded-xl border border-primary/20">
+                    <div className="space-y-4 md:col-span-2 bg-primary/5 p-4 rounded-none border border-primary/20">
                       <div className="space-y-2">
                         <Label className="text-lg font-bold text-primary">Are you interested in Placement?</Label>
                         <select 
                           {...register("interested_in_placement")}
-                          className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="flex h-11 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <option value="">Select Option</option>
                           <option value="YES">YES, I am interested in Placement</option>
@@ -1051,7 +1051,7 @@ export default function StudentProfile() {
                           <textarea
                             {...register("placement_opt_out_reason")}
                             rows={3}
-                            className="flex w-full rounded-md border border-destructive/40 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="flex w-full rounded-none border border-destructive/40 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder="Please provide your reason (e.g. Planning for Higher Studies, Running Family Business, Entrepreneurship, Govt Exam Preparation)"
                           />
                         </div>
@@ -1077,7 +1077,7 @@ export default function StudentProfile() {
                       />
                       <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
                          <span className={cn(
-                           "h-1.5 w-1.5 rounded-full",
+                           "h-1.5 w-1.5 rounded-none",
                            watch("photo_url") ? (
                               (() => { try { new URL(watch("photo_url")); return true; } catch { return false; } })() 
                               ? "bg-emerald-500" : "bg-red-500"
@@ -1104,7 +1104,7 @@ export default function StudentProfile() {
                       />
                       <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
                          <span className={cn(
-                           "h-1.5 w-1.5 rounded-full",
+                           "h-1.5 w-1.5 rounded-none",
                            watch("resume_url") ? (
                               (() => { try { new URL(watch("resume_url")); return true; } catch { return false; } })() 
                               ? "bg-emerald-500" : "bg-red-500"
@@ -1183,7 +1183,7 @@ export default function StudentProfile() {
                       <Label>Geographic Classification</Label>
                       <select 
                         {...register("geographic_classification")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Area</option>
                         <option value="Urban">Urban (City)</option>
@@ -1196,7 +1196,7 @@ export default function StudentProfile() {
                       <Label>Physically Challenged?</Label>
                       <select 
                         {...register("is_physically_challenged")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Option</option>
                         <option value="YES">YES</option>
@@ -1207,7 +1207,7 @@ export default function StudentProfile() {
                       <Label>First Graduate?</Label>
                       <select 
                         {...register("is_first_graduate")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Option</option>
                         <option value="YES">YES</option>
@@ -1218,7 +1218,7 @@ export default function StudentProfile() {
                       <Label>Single Parent?</Label>
                       <select 
                         {...register("is_single_parent")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Option</option>
                         <option value="YES">YES</option>
@@ -1229,7 +1229,7 @@ export default function StudentProfile() {
                       <Label>Child of Ex-Serviceman (TN)?</Label>
                       <select 
                         {...register("is_ex_serviceman_child")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Option</option>
                         <option value="YES">YES</option>
@@ -1240,7 +1240,7 @@ export default function StudentProfile() {
                       <Label>Tamil origin from Andaman?</Label>
                       <select 
                         {...register("is_andaman_nicobar")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select Option</option>
                         <option value="YES">YES</option>
@@ -1254,10 +1254,10 @@ export default function StudentProfile() {
           </Tabs>
 
           {/* Ultra-Compact Footer Actions */}
-          <div className="flex items-center justify-between gap-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-slate-200 shadow-xl sticky bottom-4 z-30 mt-8">
+          <div className="flex items-center justify-between gap-4 bg-white/90 backdrop-blur-md p-3 rounded-none border border-slate-200 shadow-xl sticky bottom-4 z-30 mt-8">
             <div className="flex items-center gap-3 pl-2">
                <div className={cn(
-                  "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
+                  "h-8 w-8 rounded-none flex items-center justify-center transition-all",
                   progressValue === 100 ? "bg-emerald-500 shadow-emerald-200" : "bg-slate-100",
                   "shadow-sm"
                )}>
@@ -1283,7 +1283,7 @@ export default function StudentProfile() {
                 variant="outline"
                 onClick={handleSaveDraft}
                 disabled={isSaving || !!(status && !['rejected'].includes(status))}
-                className="h-10 px-4 rounded-xl border-slate-200 hover:bg-slate-50 text-slate-600 font-bold active:scale-95 transition-all text-[11px] uppercase tracking-wider disabled:opacity-50"
+                className="h-10 px-4 rounded-none border-slate-200 hover:bg-slate-50 text-slate-600 font-bold active:scale-95 transition-all text-[11px] uppercase tracking-wider disabled:opacity-50"
               >
                 {isSaving ? (
                   <Loader2 className="h-3 w-3 animate-spin mr-2" />
@@ -1297,7 +1297,7 @@ export default function StudentProfile() {
                 type="submit" 
                 disabled={isSaving || progressValue < 100 || !!(status && !['rejected'].includes(status))}
                 className={cn(
-                  "h-10 px-6 rounded-xl font-black uppercase tracking-widest text-[11px] transition-all active:scale-95 shadow-md",
+                  "h-10 px-6 rounded-none font-black uppercase tracking-widest text-[11px] transition-all active:scale-95 shadow-md",
                   (progressValue === 100 && !(status && !['rejected'].includes(status))) 
                       ? "bg-primary hover:bg-primary/90 text-white shadow-primary/20" 
                       : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
@@ -1316,7 +1316,7 @@ export default function StudentProfile() {
 
         {/* Confirmation Dialog */}
         <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-          <AlertDialogContent className="rounded-2xl border-primary/20 bg-card/95 backdrop-blur-xl">
+          <AlertDialogContent className="rounded-none border-primary/20 bg-card/95 backdrop-blur-xl">
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2 text-2xl">
                 <AlertCircle className="h-6 w-6 text-primary" />
@@ -1327,10 +1327,10 @@ export default function StudentProfile() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="pt-4">
-              <AlertDialogCancel className="rounded-xl">Review Again</AlertDialogCancel>
+              <AlertDialogCancel className="rounded-none">Review Again</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={() => formData && onActualSubmit(formData)}
-                className="bg-primary hover:bg-primary/90 text-white rounded-xl px-6"
+                className="bg-primary hover:bg-primary/90 text-white rounded-none px-6"
               >
                 Yes, Submit Now
               </AlertDialogAction>
@@ -1340,8 +1340,8 @@ export default function StudentProfile() {
 
         {/* Success Dialog */}
         <AlertDialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
-          <AlertDialogContent className="rounded-3xl border-none bg-gradient-to-br from-primary to-primary/80 text-white text-center p-8">
-            <div className="mx-auto bg-white/20 w-20 h-20 rounded-full flex items-center justify-center mb-6">
+          <AlertDialogContent className="rounded-none border-none bg-gradient-to-br from-primary to-primary/80 text-white text-center p-8">
+            <div className="mx-auto bg-white/20 w-20 h-20 rounded-none flex items-center justify-center mb-6">
               <PartyPopper className="h-10 w-10 text-white" />
             </div>
             <AlertDialogHeader>
@@ -1353,13 +1353,13 @@ export default function StudentProfile() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="space-y-4 pt-6">
-               <div className="bg-white/10 rounded-2xl p-4 text-sm flex items-start gap-3 text-left">
+               <div className="bg-white/10 rounded-none p-4 text-sm flex items-start gap-3 text-left">
                   <CheckCircle2 className="h-5 w-5 shrink-0" />
                   <p>Next step: Your HOD will review your academic records and forward them to the TPO.</p>
                </div>
             </div>
             <AlertDialogFooter className="flex justify-center sm:justify-center pt-6">
-              <AlertDialogAction className="bg-white text-primary hover:bg-white/90 rounded-2xl px-10 font-bold py-6 text-lg w-full">
+              <AlertDialogAction className="bg-white text-primary hover:bg-white/90 rounded-none px-10 font-bold py-6 text-lg w-full">
                 Great, Thank You!
               </AlertDialogAction>
             </AlertDialogFooter>
