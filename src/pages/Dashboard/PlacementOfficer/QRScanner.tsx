@@ -26,6 +26,13 @@ export default function QRScanner() {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
   useEffect(() => {
+    // Check for Secure Context (HTTPS/Localhost)
+    if (!window.isSecureContext && window.location.hostname !== "localhost") {
+      toast.error("Camera access requires a SECURE connection (HTTPS). Testing on mobile requires Vercel link or local HTTPS.", {
+        duration: 10000
+      });
+    }
+
     if (scanning) {
       const scanner = new Html5QrcodeScanner(
         "qr-reader",
@@ -34,7 +41,10 @@ export default function QRScanner() {
       );
 
       scanner.render(onScanSuccess, (err) => {
-        // Silent failure for every frame that doesn't have a QR
+        // Log errors only if they are not the "No QR code found" error
+        if (!err.includes("No QR code found")) {
+           console.warn("Scanner Status:", err);
+        }
       });
 
       scannerRef.current = scanner;
