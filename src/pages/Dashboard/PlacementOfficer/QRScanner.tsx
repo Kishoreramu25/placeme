@@ -15,7 +15,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 export default function QRScanner() {
-  const [scanning, setScanning] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
   const [student, setStudent] = useState<any>(null);
   const [drive, setDrive] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -23,6 +24,7 @@ export default function QRScanner() {
   const [currentIds, setCurrentIds] = useState<{ student_id: string; drive_id: string } | null>(null);
   const [scannedBy, setScannedBy] = useState("");
   const [isAlreadyPresent, setIsAlreadyPresent] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,12 +70,36 @@ export default function QRScanner() {
     };
   }, [scanning]);
 
+  const requestPermission = async () => {
+    setLoading(true);
+    setPermissionError(null);
+    try {
+      // Use Html5Qrcode to request permission by trying to list cameras
+      const devices = await Html5Qrcode.getCameras();
+      if (devices && devices.length > 0) {
+        setHasPermission(true);
+        setScanning(true);
+        toast.success("Camera access granted!");
+      } else {
+        throw new Error("No cameras found on this device.");
+      }
+    } catch (err: any) {
+      console.error("Camera Access Error:", err);
+      const msg = err.message || "Generic camera error";
+      setPermissionError(msg);
+      toast.error(`Permission Denied: ${msg}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setLoading(true);
     try {
+      // Use a hidden container or direct scan for files
       const html5QrCode = new Html5Qrcode("qr-reader-hidden");
       const decodedText = await html5QrCode.scanFile(file, true);
       onScanSuccess(decodedText);
@@ -223,68 +249,167 @@ export default function QRScanner() {
         {/* Scanner Section */}
         <div className="lg:col-span-5 space-y-6">
           <div className="space-y-4">
-             <Card className={`overflow-hidden border-none shadow-premium rounded-[2rem] transition-all duration-500 ${scanning ? 'ring-2 ring-primary ring-offset-8' : 'opacity-40 pointer-events-none grayscale'}`}>
-               <CardHeader className="bg-slate-900 text-white p-6 pb-4">
-                 <div className="flex items-center justify-between">
-                   <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-3">
-                      {/* SCANNER HEADER */}
-                      <Camera className="h-4 w-4 text-primary" />
-                      Active Camera
-                   </CardTitle>
-                   <Badge className="bg-primary/20 text-primary border-primary/20 text-[9px] font-black uppercase tracking-widest">
-                     Auto-Detecting
-                   </Badge>
-                 </div>
-               </CardHeader>
-               <CardContent className="p-0 bg-slate-900">
-                 <div id="qr-reader" className="w-full h-full min-h-[350px] bg-slate-900"></div>
-                 <div id="qr-reader-hidden" className="hidden"></div>
-               </CardContent>
-               <CardFooter className="bg-slate-800/50 p-4 justify-center">
-                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest animate-pulse">Scanning for codes in viewfinder...</p>
-               </CardFooter>
-             </Card>
-
-             {/* MOBILE FALLBACK BUTTON */}
-             {scanning && (
-               <div className="space-y-3">
-                 <div className="flex items-center gap-4 bg-amber-50 p-4 rounded-2xl border border-amber-100">
-                    <Info className="h-5 w-5 text-amber-600 shrink-0" />
-                    <p className="text-[10px] font-bold text-amber-700 leading-tight uppercase tracking-wide">
-                      Mobile tip: If live camera doesn't show, use the button below to take a photo.
+              {/* Scanner Section - Only show card if granted or scanning */}
+              {(scanning || (hasPermission && !student)) && (
+                <Card className={`overflow-hidden border-none shadow-premium rounded-[2rem] transition-all duration-500 ${scanning ? 'ring-2 ring-primary ring-offset-8' : 'opacity-40'}`}>
+                  <CardHeader className="bg-slate-900 text-white p-6 pb-4">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-3">
+                         <Camera className="h-4 w-4 text-primary" />
+                         Active Camera
+                      </CardTitle>
+                      <Badge className="bg-primary/20 text-primary border-primary/20 text-[9px] font-black uppercase tracking-widest">
+                        {scanning ? "Tracking" : "Paused"}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0 bg-slate-900">
+                    <div id="qr-reader" className="w-full h-full min-h-[350px] bg-slate-900"></div>
+                    <div id="qr-reader-hidden" className="hidden"></div>
+                  </CardContent>
+                  <CardFooter className="bg-slate-800/50 p-4 justify-center">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest animate-pulse">
+                      {scanning ? "Scanning for codes..." : "Permissions Granted"}
                     </p>
-                 </div>
-                 <Button 
-                   onClick={() => fileInputRef.current?.click()}
-                   className="w-full h-16 bg-white border-2 border-slate-900 text-slate-900 hover:bg-slate-50 font-black uppercase tracking-widest rounded-2xl flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all"
-                 >
-                   <Camera className="h-6 w-6" />
-                   Open Camera App
-                 </Button>
-                 <input 
-                   type="file" 
-                   ref={fileInputRef} 
-                   className="hidden" 
-                   accept="image/*" 
-                   capture="environment"
-                   onChange={onFileSelected}
-                 />
-               </div>
-             )}
+                  </CardFooter>
+                </Card>
+              )}
 
-             {!scanning && (
-               <Button 
-                 onClick={resetScanner} 
-                 variant="outline" 
-                 className="w-full h-14 border-slate-900 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-[0.98] bg-white text-slate-900 hover:bg-slate-50"
-               >
-                 <RefreshCw className="mr-3 h-4 w-4" />
-                 Re-activate Camera
-               </Button>
-             )}
-          </div>
-        </div>
+              {/* Camera Intent UI (Permission Request) */}
+              {!hasPermission && !scanning && !student && (
+                <div className="space-y-6 animate-in zoom-in-95 duration-500">
+                  <div className="bg-slate-50 border border-slate-200 p-8 rounded-[2rem] text-center space-y-4 shadow-inner">
+                    <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-md">
+                      <Camera className="h-8 w-8 text-slate-900" />
+                    </div>
+                    <div className="space-y-2">
+                       <h3 className="text-xl font-black text-slate-900 tracking-tight">Camera Initiation Required</h3>
+                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                         To mark attendance, we need secure access to your device's camera.
+                       </p>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={requestPermission}
+                    disabled={loading}
+                    className="w-full h-16 bg-slate-900 text-white hover:bg-slate-800 rounded-2xl font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all text-sm gap-3"
+                  >
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Scan className="h-5 w-5" />}
+                    Grant Camera Access
+                  </Button>
 
+                  {permissionError && (
+                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex gap-3 text-rose-600">
+                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                       <div className="text-[10px] font-bold uppercase tracking-wider leading-relaxed">
+                         Error: {permissionError}. Please ensure you have enabled camera permissions in your browser settings.
+                       </div>
+                    </div>
+                  )}
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center"><Separator className="bg-slate-200" /></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-4 font-black text-slate-400 tracking-widest">or</span></div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-4 bg-amber-50 p-4 rounded-2xl border border-amber-100">
+                       <Info className="h-5 w-5 text-amber-600 shrink-0" />
+                       <p className="text-[10px] font-bold text-amber-700 leading-tight uppercase tracking-wide">
+                         Mobile tip: If live camera doesn't show, use the button below to take a photo.
+                       </p>
+                    </div>
+                    <Button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full h-16 bg-white border-2 border-slate-900 text-slate-900 hover:bg-slate-50 font-black uppercase tracking-widest rounded-2xl flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all"
+                    >
+                      <Camera className="h-6 w-6" />
+                      Open Camera App
+                    </Button>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept="image/*" 
+                      capture="environment"
+                      onChange={onFileSelected}
+                    />
+                  </div>
+                </div>
+              )}              
+              {scanning && (
+                <div className="space-y-6">
+                  <div className="relative group p-4 bg-slate-100 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-inner">
+                    <div id="qr-reader" className="overflow-hidden rounded-[2rem] aspect-square bg-slate-900 border-none relative z-10"></div>
+                    <div className="absolute inset-0 z-0 bg-slate-200 animate-pulse"></div>
+                    <div className="absolute inset-x-8 top-12 h-1 bg-primary/20 shadow-[0_0_20px_rgba(var(--primary),0.5)] z-20 animate-scan pointer-events-none"></div>
+                  </div>
+                </div>
+              )}
+
+              {(scanning || (!student && hasPermission)) && (
+                <div className="space-y-3 mt-4">
+                  <div className="flex items-center gap-4 bg-amber-50 p-4 rounded-2xl border border-amber-100">
+                     <Info className="h-5 w-5 text-amber-600 shrink-0" />
+                     <p className="text-[10px] font-bold text-amber-700 leading-tight uppercase tracking-wide">
+                       Mobile Tip: If live camera fails, use the button below to take a photo.
+                     </p>
+                  </div>
+                  <Button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-16 bg-white border-2 border-slate-900 text-slate-900 hover:bg-slate-50 font-black uppercase tracking-widest rounded-2xl flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all"
+                  >
+                    <Camera className="h-6 w-6" />
+                    Take Photo
+                  </Button>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    capture="environment"
+                    onChange={onFileSelected}
+                  />
+                  {scanning && (
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => {setScanning(false); setHasPermission(false);}}
+                      className="w-full text-slate-400 uppercase font-black tracking-widest text-[10px] mt-2"
+                    >
+                      Close Scanner
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {!scanning && hasPermission && !student && (
+                <div className="text-center p-8 space-y-4">
+                  <div className="h-16 w-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto border-2 border-emerald-100 shadow-sm">
+                    <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+                  </div>
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Permission Granted</p>
+                  <Button 
+                    onClick={() => setScanning(true)} 
+                    className="w-full h-14 bg-slate-900 rounded-2xl font-black uppercase tracking-widest text-white shadow-xl"
+                  >
+                    Start Scanner
+                  </Button>
+                </div>
+              )}
+
+              {!scanning && student && (
+                <Button 
+                  onClick={resetScanner} 
+                  variant="outline" 
+                  className="w-full h-16 border-slate-900 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-[0.98] bg-white text-slate-900 hover:bg-slate-50 shadow-xl"
+                >
+                  <RefreshCw className="mr-3 h-4 w-4" />
+                  Mark Another
+                </Button>
+              )}
+            </div>
+         </div>
         {/* Details Section */}
         <div className="lg:col-span-7 space-y-6">
           {loading ? (

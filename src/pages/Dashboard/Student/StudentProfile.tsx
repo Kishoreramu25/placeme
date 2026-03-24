@@ -241,20 +241,31 @@ export default function StudentProfile() {
     toast.success("Massive Demo Profile populated! 🚀");
   };
 
+  const mandatoryFields = [
+    "first_name", "last_name", "gender", "date_of_birth", 
+    "email_address", "mobile_number", "aadhar_number",
+    "nationality", "state", "district", "religion",
+    "community", "mark_10th", "percentage_10th", 
+    "school_name_10th", "board_10th", "mark_12th", "percentage_12th", 
+    "school_name_12th", "board_12th", "current_year", "current_semester",
+    "reg_no", "roll_number", "degree_branches", 
+    "batches", "regulations", "resume_url", "photo_url",
+    "skills", "programming_languages", "father_guardian_name",
+    "mother_name", "communication_door_street", "communication_pincode",
+    "overall_cgpa"
+  ];
+
   const progressValue = Math.round((
-    [
-      watch("first_name"), watch("last_name"), watch("gender"), watch("date_of_birth"), 
-      watch("email_address"), watch("mobile_number"), watch("aadhar_number"),
-      watch("nationality"), watch("state"), watch("district"), watch("religion"),
-      watch("community"), watch("mark_10th"), watch("percentage_10th"), 
-      watch("school_name_10th"), watch("board_10th"), watch("mark_12th"), watch("percentage_12th"), 
-      watch("school_name_12th"), watch("board_12th"), watch("current_year"), watch("current_semester"),
-      watch("reg_no"), watch("roll_number"), watch("degree_branches"), 
-      watch("batches"), watch("regulations"), watch("resume_url"), watch("photo_url"),
-      watch("skills"), watch("programming_languages"), watch("father_guardian_name"),
-      watch("mother_name"), watch("communication_door_street"), watch("communication_pincode")
-    ].filter(v => v && v.toString().trim().length > 0).length / 35
+    mandatoryFields.filter(field => {
+      const val = watch(field as any);
+      return val !== undefined && val !== null && val.toString().trim().length > 0;
+    }).length / mandatoryFields.length
   ) * 100);
+
+  const filledCount = mandatoryFields.filter(field => {
+    const val = watch(field as any);
+    return val !== undefined && val !== null && val.toString().trim().length > 0;
+  }).length;
 
   const handleSaveDraft = async () => {
     const data = getValues();
@@ -262,15 +273,23 @@ export default function StudentProfile() {
     const toastId = toast.loading("Persisting your progress to secure storage...");
     
     try {
+      if (!user?.id) throw new Error("Authentication session lost. Please log in again.");
+
       const { id, created_at, updated_at: old_updated, approval_status: old_status, ...rest } = data as any;
+      
+      // Ensure we explicitly set 'draft' if no status exists, otherwise preserve status
+      const targetStatus = status || 'draft';
+
       const { error } = await supabase.from("students_master").upsert({
         id: user.id,
         ...rest,
         department_id: studentDeptId,
+        approval_status: targetStatus,
         updated_at: new Date().toISOString(),
       });
 
       if (error) throw error;
+      setStatus(targetStatus);
       toast.success("Progress Saved! You can Safely Reload.", { id: toastId });
     } catch (err: any) {
       toast.error("Save failed: " + (err.message || "Unknown error"), { id: toastId });
@@ -285,6 +304,8 @@ export default function StudentProfile() {
     const toastId = toast.loading("Locking and submitting your official digital dossier...");
     
     try {
+      if (!user?.id) throw new Error("Authentication session lost.");
+
       const { id, created_at, updated_at: old_updated, approval_status: old_status, ...rest } = data as any;
       const { error } = await supabase.from("students_master").upsert({
         id: user.id,
@@ -365,43 +386,22 @@ export default function StudentProfile() {
                   <div className="h-1.5 w-1.5 rounded-none bg-primary animate-pulse" />
                   <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 shrink-0">Dossier Integrity</span>
                   <span className="text-xs font-black text-slate-900 leading-none">
-                     {Math.round((
-                       [
-                         watch("first_name"), watch("last_name"), watch("gender"), watch("date_of_birth"), 
-                         watch("email_address"), watch("mobile_number"), watch("aadhar_number"),
-                         watch("nationality"), watch("state"), watch("district"), watch("religion"),
-                         watch("community"), watch("mark_10th"), watch("percentage_10th"), 
-                         watch("school_name_10th"), watch("board_10th"), watch("mark_12th"), watch("percentage_12th"), 
-                         watch("school_name_12th"), watch("board_12th"), watch("current_year"), watch("current_semester"),
-                         watch("reg_no"), watch("roll_number"), watch("degree_branches"), 
-                         watch("batches"), watch("regulations"), watch("resume_url"), watch("photo_url"),
-                         watch("skills"), watch("programming_languages"), watch("father_guardian_name"),
-                         watch("mother_name"), watch("communication_door_street"), watch("communication_pincode")
-                       ].filter(v => v && v.toString().trim().length > 0).length / 35
-                     ) * 100)}%
+                     {progressValue}% ({filledCount}/{mandatoryFields.length})
                   </span>
                </div>
             </div>
             
             <div className="flex-1 max-w-md">
                <Progress 
-                  value={(
-                    [
-                      watch("first_name"), watch("last_name"), watch("gender"), watch("date_of_birth"), 
-                      watch("email_address"), watch("mobile_number"), watch("aadhar_number"),
-                      watch("nationality"), watch("state"), watch("district"), watch("religion"),
-                      watch("community"), watch("mark_10th"), watch("percentage_10th"), 
-                      watch("school_name_10th"), watch("board_10th"), watch("mark_12th"), watch("percentage_12th"), 
-                      watch("school_name_12th"), watch("board_12th"), watch("current_year"), watch("current_semester"),
-                      watch("reg_no"), watch("roll_number"), watch("degree_branches"), 
-                      watch("batches"), watch("regulations"), watch("resume_url"), watch("photo_url"),
-                      watch("skills"), watch("programming_languages"), watch("father_guardian_name"),
-                      watch("mother_name"), watch("communication_door_street"), watch("communication_pincode")
-                    ].filter(v => v && v.toString().trim().length > 0).length / 35
-                  ) * 100} 
-                  className="h-1 bg-slate-100 rounded-none" 
+                  value={progressValue} 
+                  className="h-1 bg-slate-100 rounded-none overflow-hidden" 
                />
             </div>
+            {progressValue < 100 && (
+               <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 border border-slate-100">
+                 Complete all 36 core fields to unlock submission
+               </div>
+            )}
          </div>
       </div>
 
@@ -1282,7 +1282,7 @@ export default function StudentProfile() {
                 type="button"
                 variant="outline"
                 onClick={handleSaveDraft}
-                disabled={isSaving || !!(status && !['rejected'].includes(status))}
+                disabled={isSaving || status === 'approved_by_tpo'}
                 className="h-10 px-4 rounded-none border-slate-200 hover:bg-slate-50 text-slate-600 font-bold active:scale-95 transition-all text-[11px] uppercase tracking-wider disabled:opacity-50"
               >
                 {isSaving ? (
@@ -1295,10 +1295,10 @@ export default function StudentProfile() {
 
               <Button 
                 type="submit" 
-                disabled={isSaving || progressValue < 100 || !!(status && !['rejected'].includes(status))}
+                disabled={isSaving || progressValue < 90 || status === 'approved_by_tpo' || status === 'approved_by_hod'}
                 className={cn(
                   "h-10 px-6 rounded-none font-black uppercase tracking-widest text-[11px] transition-all active:scale-95 shadow-md",
-                  (progressValue === 100 && !(status && !['rejected'].includes(status))) 
+                  (progressValue >= 90 && (status !== 'approved_by_tpo' && status !== 'approved_by_hod')) 
                       ? "bg-primary hover:bg-primary/90 text-white shadow-primary/20" 
                       : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
                 )}

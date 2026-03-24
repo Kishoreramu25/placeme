@@ -104,6 +104,7 @@ interface PlacementDrive {
   company_linkedin: string | null;
   other_links: string | null;
   round_details?: any;
+  status?: string | null;
 }
 
 interface Company {
@@ -233,10 +234,10 @@ export default function Drives() {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async (data: DriveFormData) => {
-      const toastId = toast.loading(editingDrive ? "Updating drive details..." : "Scheduling new drive...");
-      const { eligible_departments, company_name, academic_year, ...rest } = data;
-      
+    mutationFn: async ({ data, isDraft }: { data: DriveFormData; isDraft: boolean }) => {
+      const { company_name, eligible_departments, ...rest } = data;
+      const toastId = toast.loading(isDraft ? "Saving draft..." : "Scheduling drive...");
+
       try {
         // 1. Resolve Company
         let company_id;
@@ -302,7 +303,8 @@ export default function Drives() {
           // Normalize to Rupees if input was LPA, otherwise keep as is
           ctc_amount: rest.ctc_amount && rest.ctc_amount < 100 ? rest.ctc_amount * 100000 : rest.ctc_amount,
           company_id,
-          academic_year_id
+          academic_year_id,
+          status: isDraft ? 'draft' : 'scheduled'
         };
         
         let driveId;
@@ -330,9 +332,7 @@ export default function Drives() {
         }
 
         // Sync departments
-        const { error: delError } = await supabase.from("drive_eligible_departments").delete().eq("drive_id", driveId);
-        if (delError) throw delError;
-
+        await supabase.from("drive_eligible_departments").delete().eq("drive_id", driveId);
         if (eligible_departments.length > 0) {
           const deptRecords = eligible_departments.map(deptId => ({
             drive_id: driveId,
@@ -614,11 +614,11 @@ export default function Drives() {
                   </DialogHeader>
                 </div>
                 <form 
-                  onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} 
+                  onSubmit={form.handleSubmit((data) => saveMutation.mutate({ data, isDraft: false }))} 
                   className="p-6 space-y-6"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && e.ctrlKey) {
-                      form.handleSubmit((data) => saveMutation.mutate(data))();
+                      form.handleSubmit((data) => saveMutation.mutate({ data, isDraft: false }))();
                     }
                   }}
                 >
@@ -988,6 +988,16 @@ export default function Drives() {
                       <Button type="button" variant="ghost" onClick={handleDialogClose}>
                         Discard
                       </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        disabled={saveMutation.isPending} 
+                        onClick={() => form.handleSubmit((data) => saveMutation.mutate({ data, isDraft: true }))()}
+                        className="rounded-lg border-primary/20 hover:bg-primary/5 text-primary"
+                      >
+                         {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ClipboardList className="mr-2 h-4 w-4" />}
+                         Save as Draft
+                      </Button>
                       <Button type="submit" disabled={saveMutation.isPending} className="min-w-[150px] rounded-lg shadow-lg hover:shadow-xl transition-all shadow-primary/20">
                         {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                         {editingDrive ? "Update Schedule" : "Confirm Schedule"}
@@ -1079,6 +1089,9 @@ export default function Drives() {
                         <TableCell>
                           <div className="flex flex-col gap-1.5 items-start">
                             {getDriveTypeBadge(drive.drive_type)}
+                            {drive.status === 'draft' && (
+                              <Badge className="bg-slate-500 text-white border-0 text-[10px] font-black h-4 px-1">DRAFT</Badge>
+                            )}
                             <div className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">
                               <MapPin className="h-3 w-3" />
                               {drive.visit_mode === 'on_campus' ? 'On Campus' : drive.visit_mode === 'off_campus' ? 'Off Campus' : 'Virtual'}
