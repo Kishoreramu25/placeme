@@ -66,12 +66,14 @@ import {
   History,
   Award,
   CheckSquare,
+  CheckCircle2,
   Info,
   Layers
 } from "lucide-react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { driveSchema, DriveFormData } from "@/lib/validations";
+import { DriveAttendanceDialog } from "@/components/dashboard/DriveAttendanceDialog";
 
 interface PlacementDrive {
   id: string;
@@ -127,6 +129,7 @@ export default function Drives() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDrive, setEditingDrive] = useState<PlacementDrive | null>(null);
+  const [attendanceDrive, setAttendanceDrive] = useState<PlacementDrive | null>(null);
   const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
 
   const form = useForm<DriveFormData>({
@@ -1131,13 +1134,17 @@ export default function Drives() {
                                 <MoreHorizontal className="h-5 w-5" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-[160px]">
-                              <DropdownMenuItem onClick={() => handleEdit(drive)} className="cursor-pointer">
-                                <Pencil className="mr-3 h-4 w-4" />
+                            <DropdownMenuContent align="end" className="w-[180px] p-2 rounded-xl shadow-premium border-slate-100">
+                              <DropdownMenuItem onClick={() => handleEdit(drive)} className="cursor-pointer rounded-lg font-bold py-2.5">
+                                <Pencil className="mr-3 h-4 w-4 text-slate-400" />
                                 Edit Drive
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setAttendanceDrive(drive)} className="cursor-pointer rounded-lg font-bold py-2.5 text-primary bg-primary/5 mt-1">
+                                <CheckCircle2 className="mr-3 h-4 w-4" />
+                                View Attendance
+                              </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="text-destructive cursor-pointer hover:bg-destructive/10"
+                                className="text-destructive cursor-pointer hover:bg-destructive/10 rounded-lg font-bold py-2.5 mt-1"
                                 onClick={() => handleDelete(drive.id)}
                               >
                                 <Trash2 className="mr-3 h-4 w-4" />
@@ -1162,6 +1169,15 @@ export default function Drives() {
             )}
           </CardContent>
         </Card>
+
+        {attendanceDrive && (
+          <DriveAttendanceDialog 
+            isOpen={!!attendanceDrive}
+            onOpenChange={(open) => !open && setAttendanceDrive(null)}
+            driveId={attendanceDrive.id}
+            companyName={attendanceDrive.companies?.name || "Drive"}
+          />
+        )}
       </div>
   );
 }

@@ -39,6 +39,7 @@ import TPOApplicationApprovals from "./pages/Dashboard/PlacementOfficer/TPOAppli
 import PlacedStudents from "./pages/Dashboard/PlacementOfficer/PlacedStudents";
 import Settings from "./pages/Dashboard/Settings";
 import AppGuide from "./pages/Dashboard/AppGuide";
+import AttendanceConfirm from "./pages/AttendanceConfirm";
 
 const queryClient = new QueryClient();
 
@@ -123,6 +124,7 @@ const App = () => (
 
             {/* Public Routes */}
             <Route path="/placements" element={<Placements />} />
+            <Route path="/attend" element={<AttendanceConfirm />} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/auth" replace />} />

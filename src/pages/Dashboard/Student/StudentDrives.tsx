@@ -26,6 +26,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import QRCode from "react-qr-code";
+import { QrCode } from "lucide-react";
 
 export default function StudentDrives() {
   const { user } = useAuth();
@@ -526,6 +528,36 @@ export default function StudentDrives() {
                       )}
                     </TabsContent>
                   </Tabs>
+
+                  {selectedDrive.applicationStatus === 'approved_by_tpo' && (
+                    <div className="p-8 bg-black rounded-3xl shadow-2xl relative overflow-hidden group border border-white/10 flex flex-col items-center gap-6">
+                      <div className="absolute top-0 right-0 p-8 opacity-[0.1] transition-transform group-hover:rotate-12">
+                        <QrCode className="h-24 w-24 text-white" />
+                      </div>
+                      <div className="text-center space-y-2">
+                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center justify-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Attendance QR Code Activated
+                        </p>
+                        <h3 className="text-xl text-white font-black tracking-widest uppercase">Drive Identity Pass</h3>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Show this to the invigilator on drive day</p>
+                      </div>
+
+                      <div className="p-4 bg-white rounded-2xl shadow-premium animate-in zoom-in-95 duration-500">
+                        <QRCode
+                          value={`${window.location.origin}/attend?student_id=${user?.id}&drive_id=${selectedDrive.id}`}
+                          size={180}
+                          level="H"
+                          style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                        />
+                      </div>
+
+                      <div className="text-center space-y-1">
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">Digital Entry ID</p>
+                        <p className="text-xs text-white/50 font-mono">{user?.id?.slice(0, 18)}...</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Scheduled Interview (Contextual for later stages) */}
                   {selectedDrive.applicationStatus === 'interview_scheduled' && selectedDrive.applicationDetails?.interview_timestamp && (
