@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5QrcodeScanner, Html5Qrcode } from "html5-qrcode";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,12 +24,13 @@ export default function QRScanner() {
   const [scannedBy, setScannedBy] = useState("");
   const [isAlreadyPresent, setIsAlreadyPresent] = useState(false);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Check for Secure Context (HTTPS/Localhost)
     if (!window.isSecureContext && window.location.hostname !== "localhost") {
-      toast.error("Camera access requires a SECURE connection (HTTPS). Testing on mobile requires Vercel link or local HTTPS.", {
-        duration: 10000
+      toast.error("Live Camera requires HTTPS. Using 'Camera App' fallback for you.", {
+        duration: 5000
       });
     }
 
@@ -56,6 +57,24 @@ export default function QRScanner() {
       }
     };
   }, [scanning]);
+
+  const onFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    try {
+      const html5QrCode = new Html5Qrcode("qr-reader-hidden");
+      const decodedText = await html5QrCode.scanFile(file, true);
+      onScanSuccess(decodedText);
+    } catch (err) {
+      console.error("QR Scan Error:", err);
+      toast.error("Could not find a valid QR code in that photo. Try again.");
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   async function onScanSuccess(decodedText: string) {
     try {
@@ -193,37 +212,67 @@ export default function QRScanner() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Scanner Section */}
         <div className="lg:col-span-5 space-y-6">
-          <Card className={`overflow-hidden border-none shadow-premium rounded-[2rem] transition-all duration-500 ${scanning ? 'ring-2 ring-primary ring-offset-8' : 'opacity-40 pointer-events-none grayscale'}`}>
-            <CardHeader className="bg-slate-900 text-white p-6 pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-3">
-                   {/* SCANNER HEADER */}
-                   <Camera className="h-4 w-4 text-primary" />
-                   Active Camera
-                </CardTitle>
-                <Badge className="bg-primary/20 text-primary border-primary/20 text-[9px] font-black uppercase tracking-widest">
-                  Auto-Detecting
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0 bg-slate-900">
-              <div id="qr-reader" className="w-full h-full min-h-[350px] bg-slate-900"></div>
-            </CardContent>
-            <CardFooter className="bg-slate-800/50 p-4 justify-center">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest animate-pulse">Scanning for codes in viewfinder...</p>
-            </CardFooter>
-          </Card>
+          <div className="space-y-4">
+             <Card className={`overflow-hidden border-none shadow-premium rounded-[2rem] transition-all duration-500 ${scanning ? 'ring-2 ring-primary ring-offset-8' : 'opacity-40 pointer-events-none grayscale'}`}>
+               <CardHeader className="bg-slate-900 text-white p-6 pb-4">
+                 <div className="flex items-center justify-between">
+                   <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-3">
+                      {/* SCANNER HEADER */}
+                      <Camera className="h-4 w-4 text-primary" />
+                      Active Camera
+                   </CardTitle>
+                   <Badge className="bg-primary/20 text-primary border-primary/20 text-[9px] font-black uppercase tracking-widest">
+                     Auto-Detecting
+                   </Badge>
+                 </div>
+               </CardHeader>
+               <CardContent className="p-0 bg-slate-900">
+                 <div id="qr-reader" className="w-full h-full min-h-[350px] bg-slate-900"></div>
+                 <div id="qr-reader-hidden" className="hidden"></div>
+               </CardContent>
+               <CardFooter className="bg-slate-800/50 p-4 justify-center">
+                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest animate-pulse">Scanning for codes in viewfinder...</p>
+               </CardFooter>
+             </Card>
 
-          {!scanning && (
-            <Button 
-              onClick={resetScanner} 
-              variant="outline" 
-              className="w-full h-14 border-slate-900 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-[0.98] bg-white text-slate-900 hover:bg-slate-50"
-            >
-              <RefreshCw className="mr-3 h-4 w-4" />
-              Re-activate Camera
-            </Button>
-          )}
+             {/* MOBILE FALLBACK BUTTON */}
+             {scanning && (
+               <div className="space-y-3">
+                 <div className="flex items-center gap-4 bg-amber-50 p-4 rounded-2xl border border-amber-100">
+                    <Info className="h-5 w-5 text-amber-600 shrink-0" />
+                    <p className="text-[10px] font-bold text-amber-700 leading-tight uppercase tracking-wide">
+                      Mobile tip: If live camera doesn't show, use the button below to take a photo.
+                    </p>
+                 </div>
+                 <Button 
+                   onClick={() => fileInputRef.current?.click()}
+                   className="w-full h-16 bg-white border-2 border-slate-900 text-slate-900 hover:bg-slate-50 font-black uppercase tracking-widest rounded-2xl flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all"
+                 >
+                   <Camera className="h-6 w-6" />
+                   Open Camera App
+                 </Button>
+                 <input 
+                   type="file" 
+                   ref={fileInputRef} 
+                   className="hidden" 
+                   accept="image/*" 
+                   capture="environment"
+                   onChange={onFileSelected}
+                 />
+               </div>
+             )}
+
+             {!scanning && (
+               <Button 
+                 onClick={resetScanner} 
+                 variant="outline" 
+                 className="w-full h-14 border-slate-900 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-[0.98] bg-white text-slate-900 hover:bg-slate-50"
+               >
+                 <RefreshCw className="mr-3 h-4 w-4" />
+                 Re-activate Camera
+               </Button>
+             )}
+          </div>
         </div>
 
         {/* Details Section */}
