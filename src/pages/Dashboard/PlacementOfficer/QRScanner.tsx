@@ -25,47 +25,50 @@ export default function QRScanner() {
   const [scannedBy, setScannedBy] = useState("");
   const [isAlreadyPresent, setIsAlreadyPresent] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastScannedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Check for Secure Context (HTTPS/Localhost)
-    if (!window.isSecureContext && window.location.hostname !== "localhost") {
-      toast.error("Live Camera requires HTTPS. Using 'Camera App' fallback for you.", {
-        duration: 5000
-      });
-    }
-
     if (scanning) {
-      // Delay slightly to ensure DOM is rendered
-      const timer = setTimeout(() => {
-        const element = document.getElementById("qr-reader");
-        if (!element) {
-          console.warn("Scanner container 'qr-reader' not found in DOM yet.");
-          return;
+      const startScanner = async () => {
+        try {
+          const element = document.getElementById("qr-reader");
+          if (!element) return;
+
+          const h5qr = new Html5Qrcode("qr-reader");
+          html5QrCodeRef.current = h5qr;
+
+          const config = {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0
+          };
+
+          await h5qr.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText) => {
+              if (decodedText !== lastScannedRef.current) {
+                lastScannedRef.current = decodedText;
+                onScanSuccess(decodedText);
+              }
+            },
+            () => {} // silent on failure to detect
+          );
+        } catch (err) {
+          console.error("Scanner start error:", err);
+          setScanning(false);
+          toast.error("Failed to start camera. Please refresh or check permissions.");
         }
+      };
 
-        const scanner = new Html5QrcodeScanner(
-          "qr-reader",
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          false
-        );
-
-        scanner.render(onScanSuccess, (err) => {
-          if (!err.includes("No QR code found")) {
-             console.warn("Scanner Status:", err);
-          }
-        });
-
-        scannerRef.current = scanner;
-      }, 100);
-
-      return () => clearTimeout(timer);
+      startScanner();
     }
 
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        html5QrCodeRef.current.stop().catch(e => console.error("Stop Error:", e));
       }
     };
   }, [scanning]);
@@ -114,26 +117,40 @@ export default function QRScanner() {
 
   async function onScanSuccess(decodedText: string) {
     try {
-      const url = new URL(decodedText);
-      const studentId = url.searchParams.get("student_id");
-      const driveId = url.searchParams.get("drive_id");
+      console.log("Scanned Content:", decodedText);
+      
+      let studentId = "";
+      let driveId = "";
 
-      if (!studentId || !driveId) {
-        toast.error("Invalid QR Code: Missing parameters");
+      // Try to parse as URL
+      try {
+        const url = new URL(decodedText);
+        studentId = url.searchParams.get("student_id") || "";
+        driveId = url.searchParams.get("drive_id") || "";
+      } catch (e) {
+        // Fallback for simple ID-based string if ever used
+        toast.error("Format not recognized. Please use the valid portal QR.");
         return;
       }
 
+      if (!studentId || !driveId) {
+        toast.error("Invalid QR: Data missing");
+        return;
+      }
+
+      // Stop scanning before proceeding
       setScanning(false);
-      if (scannerRef.current) {
-        await scannerRef.current.clear();
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        await html5QrCodeRef.current.stop();
       }
       
+      toast.success("QR Validated! Fetching details...");
       setCurrentIds({ student_id: studentId, drive_id: driveId });
       fetchDetails(studentId, driveId);
 
     } catch (err) {
-      console.error("Invalid QR encoded data", err);
-      toast.error("Invalid QR Code detected");
+      console.error("Scan processing error", err);
+      toast.error("Error processing QR code");
     }
   }
 
