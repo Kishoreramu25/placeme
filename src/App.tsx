@@ -40,6 +40,7 @@ import PlacedStudents from "./pages/Dashboard/PlacementOfficer/PlacedStudents";
 import Settings from "./pages/Dashboard/Settings";
 import AppGuide from "./pages/Dashboard/AppGuide";
 import AttendanceConfirm from "./pages/AttendanceConfirm";
+import QRScanner from "./pages/Dashboard/PlacementOfficer/QRScanner";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
               <Route path="approvals" element={<TPOApplicationApprovals />} />
               <Route path="placed" element={<PlacedStudents />} />
               <Route path="users" element={<TPOUserManagement />} />
+              <Route path="scanner" element={<QRScanner />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 

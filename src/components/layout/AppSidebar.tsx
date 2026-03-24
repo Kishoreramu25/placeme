@@ -53,6 +53,7 @@ const tpoNavItems: NavItem[] = [
   { title: "Application Pool", url: "/tpo/applications", icon: Inbox },
   { title: "Pending Approvals", url: "/tpo/approvals", icon: ClipboardCheck },
   { title: "Students Master", url: "/tpo/students", icon: Users },
+  { title: "Attendance Scanner", url: "/tpo/scanner", icon: ShieldCheck },
   { title: "User Management", url: "/tpo/users", icon: UserPlus },
   { title: "Settings", url: "/tpo/settings", icon: Settings },
 ];
