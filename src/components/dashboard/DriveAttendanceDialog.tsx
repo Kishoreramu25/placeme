@@ -42,48 +42,23 @@ export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyNa
   const fetchAttendance = async () => {
     setLoading(true);
     try {
-      // 1. Fetch approved students for this drive
-      const { data: applications, error: appError } = await supabase
-        .from("placement_applications" as any)
-        .select(`
-          student_id,
-          students_master:student_id (
-            first_name,
-            last_name,
-            reg_no,
-            department_id,
-            departments (name)
-          )
-        `)
-        .eq("drive_id", driveId)
-        .eq("status", "approved_by_tpo");
+      const { data, error } = await supabase
+        .rpc('get_drive_attendance' as any, { p_drive_id: driveId });
 
-      if (appError) throw appError;
+      if (error) {
+        console.error('Attendance fetch error:', error);
+        throw error;
+      }
 
-      // 2. Fetch attendance records
-      const { data: attendance, error: attError } = await supabase
-        .from("drive_attendance" as any)
-        .select("*")
-        .eq("drive_id", driveId);
-
-      if (attError) throw attError;
-
-      const attList = (attendance || []) as any[];
-      const attMap = new Map(attList.map(a => [a.student_id, a]));
-
-      const combined = (applications as any[] || []).map((app: any) => {
-        const student = app.students_master;
-        const att = attMap.get(app.student_id) as any;
-        return {
-          id: app.student_id,
-          name: `${student?.first_name || ""} ${student?.last_name || ""}`,
-          regNo: student?.reg_no || "N/A",
-          dept: student?.departments?.name || "N/A",
-          status: att?.status || "absent",
-          scannedAt: att?.scanned_at,
-          scannedBy: att?.scanned_by
-        };
-      });
+      const combined = (data as any[] || []).map((student: any) => ({
+        id: student.student_id,
+        name: `${student.first_name || ""} ${student.last_name || ""}`,
+        regNo: student.reg_no || "N/A",
+        dept: student.department_name || "N/A",
+        status: student.attendance_status || "absent",
+        scannedAt: student.scanned_at,
+        scannedBy: student.scanned_by
+      }));
 
       setStudents(combined);
     } catch (err: any) {
