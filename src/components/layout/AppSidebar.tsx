@@ -60,6 +60,7 @@ const tpoNavItems: NavItem[] = [
 
 const hodNavItems: NavItem[] = [
   { title: "Pending Students", url: "/hod", icon: ClipboardCheck },
+  { title: "Upcoming Drives", url: "/hod/upcoming", icon: CalendarDays },
   { title: "Drive Applications", url: "/hod/applications", icon: FileCheck },
   { title: "Student Data Base", url: "/hod/history", icon: Database },
 ];

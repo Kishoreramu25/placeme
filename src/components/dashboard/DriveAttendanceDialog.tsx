@@ -113,7 +113,7 @@ export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyNa
         const meetHistory = (s.history_arrears || 0) <= (drive.max_history_arrears || 99);
         const meet10th = (s.mark_10th || 0) >= (drive.min_10th_mark || 0);
         const meet12th = (s.mark_12th || 0) >= (drive.min_12th_mark || 0);
-        const meetDept = allowedDepts.has(s.department_id);
+        const meetDept = allowedDepts.size === 0 || allowedDepts.has(s.department_id);
         
         // Batch match
         const studentBatch = s.batch || "";
@@ -133,9 +133,12 @@ export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyNa
           applied: !!app,
           appStatus: app?.status || "not_applied",
           attendanceStatus: att?.attendance_status || "absent",
+          scannedAt: att?.scanned_at,
+          debug: { meetCgpa, meetBacklogs, meetHistory, meet10th, meet12th, meetDept, meetBatch }
         };
       });
 
+      console.log("Roster Processed. Sample Student:", processed[0]);
       setStudents(processed);
     } catch (err: any) {
       console.error('Roster error:', err);
@@ -146,14 +149,21 @@ export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyNa
   };
 
   const exportToCSV = () => {
-    const headers = ["Name", "Reg No", "Department", "Eligibility", "Applied", "Attendance"];
-    const rows = students.map(s => [
+    const headers = ["Name", "Reg No", "Department", "Eligibility", "Applied", "Attendance Status"];
+    const eligibleOnly = students.filter(s => s.isEligible);
+    
+    if (eligibleOnly.length === 0) {
+      toast.error("No eligible students found to export.");
+      return;
+    }
+
+    const rows = eligibleOnly.map(s => [
       s.name,
       s.regNo,
       s.dept,
-      s.isEligible ? "YES" : "NO",
+      "YES",
       s.applied ? "YES" : "NO",
-      s.attendanceStatus.toUpperCase()
+      s.attendanceStatus === "present" ? "PRESENT" : "ABSENT"
     ]);
 
     const csvContent = [
@@ -175,21 +185,23 @@ export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyNa
   const eligibleStudents = students.filter(s => s.isEligible);
   const appliedAndEligible = students.filter(s => s.isEligible && s.applied);
   const eligibleButNotApplied = students.filter(s => s.isEligible && !s.applied);
+  const absenteeStudents = appliedAndEligible.filter(s => s.attendanceStatus !== "present");
 
   const presentCount = students.filter(s => s.attendanceStatus === "present").length;
   const totalEligible = eligibleStudents.length;
   const totalApplied = appliedAndEligible.length;
+  const totalAbsent = absenteeStudents.length;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-premium bg-white rounded-3xl">
-        <div className="bg-slate-900 px-8 py-6 text-white shrink-0 relative overflow-hidden">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-premium bg-white rounded-none">
+        <div className="bg-slate-900 px-8 py-6 text-white shrink-0 relative overflow-hidden rounded-none">
           <div className="absolute top-0 right-0 p-8 opacity-[0.1] -rotate-12 translate-x-8 -translate-y-4">
             <CheckCircle2 className="h-32 w-32" />
           </div>
           <DialogHeader className="relative z-10">
             <div className="flex items-center gap-4">
-               <div className="h-12 w-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/20">
+               <div className="h-12 w-12 bg-white/10 rounded-none flex items-center justify-center backdrop-blur-md border border-white/20">
                  <User className="h-6 w-6 text-emerald-400" />
                </div>
                <div>
@@ -204,64 +216,78 @@ export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyNa
 
         <div className="p-8 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
           {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-             <div className="p-4 bg-slate-900 text-white rounded-2xl shadow-xl space-y-1">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+             <div className="p-4 bg-slate-900 text-white rounded-none shadow-xl space-y-1">
                 <div className="flex items-center gap-2 text-primary opacity-80 mb-1">
                   <GraduationCap className="h-3 w-3" />
                   <span className="text-[8px] font-black uppercase tracking-widest">Total Eligible</span>
                 </div>
                 <p className="text-2xl font-black leading-none">{totalEligible}</p>
              </div>
-             <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-1">
+             <div className="p-4 bg-white border border-slate-200 rounded-none shadow-sm space-y-1">
                 <div className="flex items-center gap-2 text-emerald-600 mb-1">
                   <FileCheck className="h-3 w-3" />
                   <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Applied</span>
                 </div>
                 <p className="text-2xl font-black text-slate-900 leading-none">{totalApplied}</p>
              </div>
-             <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-1">
+             <div className="p-4 bg-white border border-slate-200 rounded-none shadow-sm space-y-1">
                 <div className="flex items-center gap-2 text-amber-600 mb-1">
                   <Target className="h-3 w-3" />
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Not Applied</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Pending App</span>
                 </div>
                 <p className="text-2xl font-black text-slate-900 leading-none">{totalEligible - totalApplied}</p>
              </div>
-             <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl shadow-sm space-y-1">
+             <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-none shadow-sm space-y-1">
                 <div className="flex items-center gap-2 text-emerald-600 mb-1">
                   <UserCheck className="h-3 w-3" />
-                  <span className="text-[8px] font-black uppercase tracking-widest">Present</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest">Marked Present</span>
                 </div>
                 <p className="text-2xl font-black text-emerald-900 leading-none">{presentCount}</p>
+             </div>
+             <div className="p-4 bg-rose-50 border border-rose-100 rounded-none shadow-sm space-y-1">
+                <div className="flex items-center gap-2 text-rose-600 mb-1">
+                  <UserMinus className="h-3 w-3" />
+                  <span className="text-[8px] font-black uppercase tracking-widest">Absentees</span>
+                </div>
+                <p className="text-2xl font-black text-rose-900 leading-none">{totalAbsent}</p>
              </div>
           </div>
 
           <Tabs defaultValue="eligible" className="w-full space-y-6">
-            <TabsList className="grid w-full grid-cols-3 h-14 bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
-              <TabsTrigger value="eligible" className="rounded-xl font-black text-[10px] uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-premium transition-all gap-2">
+            <TabsList className="grid w-full grid-cols-4 h-14 bg-slate-100 p-1 rounded-none border border-slate-200 shadow-inner">
+              <TabsTrigger value="eligible" className="rounded-none font-black text-[9px] uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-premium transition-all gap-2">
                 <Users className="h-4 w-4" />
                 All Eligible ({totalEligible})
               </TabsTrigger>
-              <TabsTrigger value="applied" className="rounded-xl font-black text-[10px] uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-premium transition-all gap-2">
+              <TabsTrigger value="applied" className="rounded-none font-black text-[9px] uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-premium transition-all gap-2">
                 <UserCheck className="h-4 w-4" />
                 Applied ({totalApplied})
               </TabsTrigger>
-              <TabsTrigger value="not_applied" className="rounded-xl font-black text-[10px] uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-rose-600 data-[state=active]:shadow-premium transition-all gap-2">
+              <TabsTrigger value="absent" className="rounded-none font-black text-[9px] uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-rose-600 data-[state=active]:shadow-premium transition-all gap-2">
+                <XCircle className="h-4 w-4" />
+                Absent ({totalAbsent})
+              </TabsTrigger>
+              <TabsTrigger value="not_applied" className="rounded-none font-black text-[9px] uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-slate-400 data-[state=active]:shadow-premium transition-all gap-2">
                 <UserMinus className="h-4 w-4" />
                 Not Applied ({totalEligible - totalApplied})
               </TabsTrigger>
             </TabsList>
 
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between font-bold">
+            <div className="bg-white p-4 rounded-none border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between font-bold">
               <div className="relative w-full sm:max-w-xs">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
                 <Input
                   placeholder="Filter roster..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-10 border-slate-200 rounded-xl text-xs font-bold uppercase tracking-tight"
+                  className="pl-9 h-10 border-slate-200 rounded-none text-xs font-bold uppercase tracking-tight"
                 />
               </div>
-              <Button onClick={exportToCSV} variant="outline" className="h-10 border-slate-900 text-slate-900 font-black uppercase text-[10px] tracking-widest rounded-xl px-6 hover:bg-slate-900 hover:text-white transition-all">
+              <Button onClick={fetchRosterData} variant="outline" className="h-10 border-slate-200 text-slate-400 font-black uppercase text-[10px] tracking-widest rounded-none px-6 hover:bg-slate-50 transition-all mr-auto">
+                Refresh Sync
+              </Button>
+              <Button onClick={exportToCSV} variant="outline" className="h-10 border-slate-900 text-slate-900 font-black uppercase text-[10px] tracking-widest rounded-none px-6 hover:bg-slate-900 hover:text-white transition-all">
                 <Download className="mr-2 h-4 w-4" /> Export Report
               </Button>
             </div>
@@ -283,6 +309,9 @@ export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyNa
                 </TabsContent>
                 <TabsContent value="applied">
                    <StudentTable data={appliedAndEligible.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.regNo.toLowerCase().includes(searchQuery.toLowerCase()))} showStatus />
+                </TabsContent>
+                <TabsContent value="absent">
+                   <StudentTable data={absenteeStudents.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.regNo.toLowerCase().includes(searchQuery.toLowerCase()))} showStatus />
                 </TabsContent>
                 <TabsContent value="not_applied">
                    <StudentTable data={eligibleButNotApplied.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.regNo.toLowerCase().includes(searchQuery.toLowerCase()))} showStatus={false} />
@@ -307,7 +336,7 @@ function StudentTable({ data, showStatus }: { data: any[], showStatus: boolean }
   }
 
   return (
-    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white">
+    <div className="border border-slate-200 rounded-none overflow-hidden shadow-sm bg-white">
       <Table>
         <TableHeader className="bg-slate-50">
           <TableRow>
@@ -346,13 +375,15 @@ function StudentTable({ data, showStatus }: { data: any[], showStatus: boolean }
                 <TableCell>
                   <div className="flex gap-2">
                     {s.applied ? (
-                      <Badge className="bg-emerald-500 text-white border-0 text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-sm">APPLIED</Badge>
+                      <Badge className="bg-emerald-500 text-white border-0 text-[8px] font-black px-1.5 py-0.5 rounded-none shadow-sm">APPLIED</Badge>
                     ) : (
-                      <Badge variant="outline" className="border-rose-200 text-rose-500 bg-rose-50 text-[8px] font-black px-1.5 py-0.5 rounded-sm">NOT APPLIED</Badge>
+                      <Badge variant="outline" className="border-rose-200 text-rose-500 bg-rose-50 text-[8px] font-black px-1.5 py-0.5 rounded-none">NOT APPLIED</Badge>
                     )}
-                    {s.attendanceStatus === "present" && (
-                      <Badge className="bg-blue-600 text-white border-0 text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-sm">PRESENT</Badge>
-                    )}
+                    {s.attendanceStatus === "present" ? (
+                      <Badge className="bg-blue-600 text-white border-0 text-[8px] font-black px-1.5 py-0.5 rounded-none shadow-sm">PRESENT</Badge>
+                    ) : s.applied ? (
+                      <Badge className="bg-rose-600 text-white border-0 text-[8px] font-black px-1.5 py-0.5 rounded-none shadow-sm">ABSENT</Badge>
+                    ) : null}
                   </div>
                 </TableCell>
               )}

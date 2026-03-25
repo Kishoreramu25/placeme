@@ -41,6 +41,7 @@ import Settings from "./pages/Dashboard/Settings";
 import AppGuide from "./pages/Dashboard/AppGuide";
 import AttendanceConfirm from "./pages/AttendanceConfirm";
 import QRScanner from "./pages/Dashboard/PlacementOfficer/QRScanner";
+import UpcomingDrives from "./pages/Dashboard/DepartmentCoordinator/UpcomingDrives";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,7 @@ const App = () => (
               <Route index element={<StudentApprovals />} />
               <Route path="history" element={<VerificationHistory />} />
               <Route path="applications" element={<DriveApplications />} />
+              <Route path="upcoming" element={<UpcomingDrives />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 
