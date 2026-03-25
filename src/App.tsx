@@ -86,9 +86,9 @@ const App = () => (
               }
             >
               <Route index element={<StudentApprovals />} />
+              <Route path="upcoming" element={<UpcomingDrives />} />
               <Route path="history" element={<VerificationHistory />} />
               <Route path="applications" element={<DriveApplications />} />
-              <Route path="upcoming" element={<UpcomingDrives />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 
