@@ -51,7 +51,7 @@ export default function UpcomingDrives() {
       // 3. Fetch all students in THIS department to calculate eligibility
       const { data: deptStudents, error: studentsErr } = await supabase
         .from('students_master')
-        .select('id, overall_cgpa, standing_backlogs, history_arrears, batch, department_id')
+        .select('id, overall_cgpa, current_standing_arrear, history_of_arrear, current_year, department_id')
         .eq('department_id', departmentId);
       if (studentsErr) throw studentsErr;
 
@@ -67,13 +67,14 @@ export default function UpcomingDrives() {
       const processedDrives = (drivesData || []).map(drive => {
         // Find which students meet the drive criteria
         const eligibleStudents = (deptStudents || []).filter(s => {
-          const meetCgpa = (s.overall_cgpa || 0) >= (drive.min_cgpa || 0);
-          const meetBacklogs = (s.standing_backlogs || 0) <= (drive.max_backlogs || 99);
-          const meetHistory = (s.history_arrears || 0) <= (drive.max_history_arrears || 99);
-          const studentBatch = s.batch || "";
-          const driveBatches = drive.eligible_batches || [];
-          const meetBatch = driveBatches.length > 0 ? driveBatches.includes(studentBatch) : true;
-          return meetCgpa && meetBacklogs && meetHistory && meetBatch;
+          const meetCgpa = parseFloat(String(s.overall_cgpa || 0)) >= (drive.min_cgpa || 0);
+          const meetBacklogs = parseInt(String(s.current_standing_arrear || 0)) <= (drive.max_backlogs || 99);
+          const meetHistory = parseInt(String(s.history_of_arrear || 0)) <= (drive.max_history_arrears || 99);
+          const studentYear = s.current_year || "4th Year";
+          const driveTargetYear = drive.eligible_batches || "4th Year";
+          const meetYear = driveTargetYear === "All Students" || studentYear === driveTargetYear;
+          
+          return meetCgpa && meetBacklogs && meetHistory && meetYear;
         });
 
         const eligibleIds = new Set(eligibleStudents.map(s => s.id));

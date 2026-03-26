@@ -78,7 +78,7 @@ export const driveSchema = z.object({
   min_cgpa: z.number().min(0).max(10).optional().default(0),
   max_backlogs: z.number().int().min(0).optional().default(0),
   max_history_arrears: z.number().int().min(0).optional().default(0),
-  eligible_batches: z.string().nullish(),
+  eligible_batches: z.string().nullish().default("4th Year"),
   min_10th_mark: z.number().min(0).max(100).optional().default(0),
   min_12th_mark: z.number().min(0).max(100).optional().default(0),
   application_deadline: z.string().nullish(),

@@ -108,16 +108,17 @@ export function DriveAttendanceDialog({ driveId, isOpen, onOpenChange, companyNa
 
       const processed = (allStudents as any[]).map(s => {
         // Eligibility Logic
-        const meetCgpa = (s.overall_cgpa || 0) >= (drive.min_cgpa || 0);
-        const meetBacklogs = (s.standing_backlogs || 0) <= (drive.max_backlogs || 99);
-        const meetHistory = (s.history_arrears || 0) <= (drive.max_history_arrears || 99);
-        const meet10th = (s.mark_10th || 0) >= (drive.min_10th_mark || 0);
-        const meet12th = (s.mark_12th || 0) >= (drive.min_12th_mark || 0);
+        const meetCgpa = parseFloat(String(s.overall_cgpa || 0)) >= (driveData.min_cgpa || 0);
+        const meetBacklogs = parseInt(String(s.current_standing_arrear || 0)) <= (driveData.max_backlogs || 99);
+        const meetHistory = parseInt(String(s.history_of_arrear || 0)) <= (driveData.max_history_arrears || 99);
+        const meet10th = parseFloat(String(s.percentage_10th || 0)) >= (driveData.min_10th_mark || 0);
+        const meet12th = parseFloat(String(s.percentage_12th || 0)) >= (driveData.min_12th_mark || 0);
         const meetDept = allowedDepts.size === 0 || allowedDepts.has(s.department_id);
         
-        // Batch match
-        const studentBatch = s.batch || "";
-        const meetBatch = drive.eligible_batches ? drive.eligible_batches.includes(studentBatch) : true;
+        // Year match
+        const driveYear = driveData.eligible_batches || "4th Year";
+        const studentYear = s.current_year || "4th Year";
+        const meetBatch = driveYear === "All Students" || studentYear === driveYear;
 
         const isEligible = meetCgpa && meetBacklogs && meetHistory && meet10th && meet12th && meetDept && meetBatch;
         const app = appMap.get(s.id);

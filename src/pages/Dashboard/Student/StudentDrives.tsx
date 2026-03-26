@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { 
   Building2, Calendar, MapPin, Briefcase, ChevronRight, 
   CheckCircle2, AlertCircle, Info, Loader2, FileText, CheckCircle, Plus,
-  DollarSign, Globe, Linkedin, ExternalLink, Target, Sparkles, ClipboardList, Clock
+  DollarSign, Globe, Linkedin, ExternalLink, Target, Sparkles, ClipboardList, Clock, History as HistoryIcon
 } from "lucide-react";
 import {
   Dialog,
@@ -69,7 +69,9 @@ export default function StudentDrives() {
           history_of_arrears_count,
           percentage_10th,
           percentage_12th,
-          batches
+          current_year,
+          current_standing_arrear,
+          history_of_arrear
         `)
         .eq('id', user?.id)
         .single();
@@ -87,11 +89,11 @@ export default function StudentDrives() {
 
       const studentMetrics = {
         cgpa: parseMetric(studentProfile.overall_cgpa),
-        backlogs: parseMetric(studentProfile.current_backlogs),
-        historyArrears: parseMetric(studentProfile.history_of_arrears_count),
+        backlogs: parseMetric(studentProfile.current_standing_arrear),
+        historyArrears: parseMetric(studentProfile.history_of_arrear),
         mark10: parseMetric(studentProfile.percentage_10th),
         mark12: parseMetric(studentProfile.percentage_12th),
-        batch: studentProfile.batches?.trim()
+        year: studentProfile.current_year?.trim() || "4th Year"
       };
 
       // 2. Fetch all applications for this student to check current status
@@ -154,7 +156,7 @@ export default function StudentDrives() {
       if (driveError) throw driveError;
 
       // 5. Filter for eligibility and map applications
-      return ((allDrives as any) || []).filter((drive: any) => {
+      const drivePromises = ((allDrives as any) || []).filter((drive: any) => {
         // Eligibility Logic
         if (drive.min_cgpa && studentMetrics.cgpa < drive.min_cgpa) return false;
         if (drive.max_backlogs !== null && studentMetrics.backlogs > drive.max_backlogs) return false;
@@ -162,24 +164,34 @@ export default function StudentDrives() {
         if (drive.min_10th_mark && studentMetrics.mark10 < drive.min_10th_mark) return false;
         if (drive.min_12th_mark && studentMetrics.mark12 < drive.min_12th_mark) return false;
         
-        // Batch check
-        if (drive.eligible_batches && studentMetrics.batch) {
-          const driveBatches = drive.eligible_batches.split(',').map((b: string) => b.trim());
-          if (!driveBatches.includes(studentMetrics.batch)) return false;
-        }
+        // Year check
+        const driveTargetYear = drive.eligible_batches || "4th Year";
+        if (driveTargetYear !== "All Students" && studentMetrics.year !== driveTargetYear) return false;
 
         return true;
       }).map((drive: any) => {
         const application = appMap.get(drive.id);
-        return {
-          ...drive,
-          isEligible: true,
-          applicationStatus: application?.status || null,
-          applicationDetails: application || null
-        };
+
+        // EXTRA: Fetch LifeCycle status from drive_student_status (Step 7)
+        return supabase
+          .from('drive_student_status' as any)
+          .select('status, non_application_reason, absence_reason')
+          .eq('drive_id', drive.id)
+          .eq('student_id', user?.id)
+          .single()
+          .then(({ data: lifecycle }) => ({
+            ...drive,
+            isEligible: true,
+            applicationStatus: application?.status || null,
+            applicationDetails: application || null,
+            lifecycleStatus: (lifecycle as any)?.status || 'eligible',
+            lifecycleDetails: lifecycle
+          }));
       });
+
+      return Promise.all(drivePromises);
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!profile?.id,
   });
 
   const handleApply = async () => {
@@ -296,6 +308,20 @@ export default function StudentDrives() {
                 </div>
               ) : (
                 <Badge variant="outline" className="text-[10px] text-muted-foreground font-normal">TBD / Internship</Badge>
+              )}
+              {drive.lifecycleStatus && (
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1.5 flex items-center gap-1.5">
+                    <HistoryIcon className="h-3 w-3" />
+                    Intel Lifecycle Phase
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={drive.lifecycleStatus} />
+                    {drive.lifecycleStatus === 'not_applied' && (
+                      <span className="text-[9px] font-bold text-rose-500 italic">Action Required</span>
+                    )}
+                  </div>
+                </div>
               )}
             </CardContent>
             <CardFooter className="pt-0">
@@ -694,5 +720,21 @@ export default function StudentDrives() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+function StatusBadge({ status }: { status: string }) {
+  const configs: any = {
+    eligible: { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Eligible to Apply' },
+    applied: { bg: 'bg-blue-50', text: 'text-blue-600', label: 'Application Tracked' },
+    appeared: { bg: 'bg-amber-50', text: 'text-amber-600', label: 'Process Underway' },
+    selected: { bg: 'bg-emerald-600', text: 'text-white', label: 'Offer Received' },
+    absent: { bg: 'bg-rose-50', text: 'text-rose-600', label: 'Medical/Personal Absent' },
+    not_applied: { bg: 'bg-slate-900', text: 'text-white', label: 'Reason Pending' },
+  };
+  const config = configs[status] || configs.eligible;
+  return (
+    <Badge className={`${config.bg} ${config.text} border-0 font-black text-[7.5px] uppercase px-1.5 py-0.5 rounded-none shadow-sm`}>
+      {config.label}
+    </Badge>
   );
 }

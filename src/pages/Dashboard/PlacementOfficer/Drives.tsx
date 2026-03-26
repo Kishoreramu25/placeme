@@ -152,7 +152,7 @@ export default function Drives() {
       min_cgpa: 0,
       max_backlogs: 0,
       max_history_arrears: 0,
-      eligible_batches: "2021-2025",
+      eligible_batches: "4th Year",
       min_10th_mark: 0,
       min_12th_mark: 0,
       application_deadline: "",
@@ -343,6 +343,12 @@ export default function Drives() {
           if (deptError) throw deptError;
         }
         
+        // Initialize eligible students and send notifications
+        const { error: rpcError } = await supabase.rpc('initialize_drive_eligible_students', { 
+          p_drive_id: driveId 
+        });
+        if (rpcError) console.error("RPC Init Error:", rpcError);
+
         toast.dismiss(toastId);
         return true;
       } catch (err) {
@@ -488,7 +494,7 @@ export default function Drives() {
       min_cgpa: 8.0,
       max_backlogs: 0,
       max_history_arrears: 0,
-      eligible_batches: "2021-2025",
+      eligible_batches: "4th Year",
       min_10th_mark: 85,
       min_12th_mark: 85,
       application_deadline: deadline,
@@ -867,8 +873,25 @@ export default function Drives() {
                             <Input type="number" step="0.1" {...form.register("min_12th_mark", { valueAsNumber: true })} className="h-11 bg-white border-slate-200 font-bold" />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-slate-400 px-1">Eligible Batches</Label>
-                            <Input {...form.register("eligible_batches")} placeholder="2021-2025" className="h-11 bg-white border-slate-200 font-bold" />
+                            <Label className="text-[10px] font-bold uppercase text-slate-400 px-1">Target Eligibility Year</Label>
+                            <Controller
+                              name="eligible_batches"
+                              control={form.control}
+                              render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value || "4th Year"}>
+                                  <SelectTrigger className="h-11 bg-white border-slate-200 font-bold">
+                                    <SelectValue placeholder="Select Target Year" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="All Students">All Students</SelectItem>
+                                    <SelectItem value="2nd Year">2nd Year</SelectItem>
+                                    <SelectItem value="3rd Year">3rd Year</SelectItem>
+                                    <SelectItem value="4th Year">4th Year</SelectItem>
+                                    <SelectItem value="5th Year">5th Year</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
                           </div>
                         </div>
                       </div>
