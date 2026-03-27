@@ -105,6 +105,15 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Placement Record 2026 Section */}
+      <section className="w-full">
+        <img
+          src="/placement_banner_2026.jpg"
+          alt="Erode Sengunthar Engineering College Placement Record 2026"
+          className="w-full h-auto object-cover"
+        />
+      </section>
+
       {/* Hero Image Section - Full Screen Width */}
       <section className="w-full">
         <img
@@ -168,7 +177,6 @@ export default function Index() {
                 <li className="hover:text-yellow-400 cursor-default transition-colors">Research</li>
                 <li className="hover:text-yellow-400 cursor-default transition-colors">Alumni</li>
                 <li className="hover:text-yellow-400 cursor-default transition-colors">AICTE IDEA Lab</li>
-                <li className="hover:text-yellow-400 cursor-default transition-colors">ESEC Learning and Assessment Portal</li>
               </ul>
             </div>
 

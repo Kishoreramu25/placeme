@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LogOut, User, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { NotificationBell } from "@/components/dashboard/NotificationBell";
 
 export function Header() {
   const { profile, role, signOut } = useAuth();
@@ -58,6 +59,10 @@ export function Header() {
       </div>
 
       <div className="flex-1" />
+
+      <div className="flex items-center gap-2">
+        <NotificationBell />
+      </div>
 
       <Button
         variant="ghost"
