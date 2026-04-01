@@ -45,7 +45,7 @@ export default function UpcomingDrives() {
         .from('placement_drives')
         .select('*')
         .in('id', driveIds)
-        .order('drive_date', { ascending: true });
+        .order('visit_date', { ascending: true });
 
       if (drivesErr) throw drivesErr;
 
@@ -227,7 +227,7 @@ function DriveIntelCard({ drive, departmentId }: { drive: any, departmentId: str
             <div className="grid grid-cols-2 gap-4 text-left">
               <div className="bg-slate-100 p-4 border border-slate-200">
                 <p className="text-[8px] font-black uppercase text-slate-500 mb-1">DATE</p>
-                <p className="text-sm font-black text-slate-900">{new Date(drive.drive_date).toLocaleDateString()}</p>
+                <p className="text-sm font-black text-slate-900">{new Date(drive.visit_date).toLocaleDateString()}</p>
               </div>
               <div className="bg-primary/5 p-4 border border-primary/10">
                 <p className="text-[8px] font-black uppercase text-primary mb-1">MIN CGPA</p>
