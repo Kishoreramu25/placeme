@@ -68,12 +68,15 @@ import {
   CheckSquare,
   CheckCircle2,
   Info,
-  Layers
+  Layers,
+  Users
 } from "lucide-react";
+
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { driveSchema, DriveFormData } from "@/lib/validations";
 import { DriveAttendanceDialog } from "@/components/dashboard/DriveAttendanceDialog";
+import { DriveStudentsDialog } from "@/components/dashboard/DriveStudentsDialog";
 
 interface PlacementDrive {
   id: string;
@@ -131,6 +134,7 @@ export default function Drives() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDrive, setEditingDrive] = useState<PlacementDrive | null>(null);
   const [attendanceDrive, setAttendanceDrive] = useState<PlacementDrive | null>(null);
+  const [studentAnalyzerDrive, setStudentAnalyzerDrive] = useState<PlacementDrive | null>(null);
   const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
 
   const form = useForm<DriveFormData>({
@@ -344,7 +348,7 @@ export default function Drives() {
         }
         
         // Initialize eligible students and send notifications
-        const { error: rpcError } = await supabase.rpc('initialize_drive_eligible_students', { 
+        const { error: rpcError } = await (supabase.rpc as any)('initialize_drive_eligible_students', { 
           p_drive_id: driveId 
         });
         if (rpcError) console.error("RPC Init Error:", rpcError);
@@ -1179,6 +1183,10 @@ export default function Drives() {
                                 <CheckCircle2 className="mr-3 h-4 w-4" />
                                 View Attendance
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setStudentAnalyzerDrive(drive)} className="cursor-pointer rounded-lg font-bold py-2.5 text-indigo-600 bg-indigo-50 mt-1">
+                                <Users className="mr-3 h-4 w-4" />
+                                View Students
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive cursor-pointer hover:bg-destructive/10 rounded-lg font-bold py-2.5 mt-1"
                                 onClick={() => handleDelete(drive.id)}
@@ -1212,6 +1220,15 @@ export default function Drives() {
             onOpenChange={(open) => !open && setAttendanceDrive(null)}
             driveId={attendanceDrive.id}
             companyName={attendanceDrive.companies?.name || "Drive"}
+          />
+        )}
+
+        {studentAnalyzerDrive && (
+          <DriveStudentsDialog
+            isOpen={!!studentAnalyzerDrive}
+            onClose={() => setStudentAnalyzerDrive(null)}
+            driveId={studentAnalyzerDrive.id}
+            driveName={studentAnalyzerDrive.companies?.name || "Placement Drive"}
           />
         )}
       </div>

@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarRange, GraduationCap, Target, UserCheck, XCircle, Search, RefreshCcw, Building2, AlertCircle, Loader2 } from "lucide-react";
+import { CalendarRange, GraduationCap, Target, UserCheck, XCircle, Search, RefreshCcw, Building2, AlertCircle, Loader2, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { DriveStudentsDialog } from "@/components/dashboard/DriveStudentsDialog";
 
 export default function UpcomingDrives() {
   const { departmentId, user } = useAuth();
@@ -57,8 +58,8 @@ export default function UpcomingDrives() {
 
       // 4. Fetch all applications for these drives
       // (Simplified: Fetch all across the drive IDs)
-      const { data: apps, error: appsErr } = await supabase
-        .from('placement_applications' as any)
+      const { data: apps, error: appsErr } = await (supabase as any)
+        .from('placement_applications')
         .select('drive_id, student_id, status')
         .in('drive_id', driveIds);
       if (appsErr) throw appsErr;
@@ -78,7 +79,7 @@ export default function UpcomingDrives() {
         });
 
         const eligibleIds = new Set(eligibleStudents.map(s => s.id));
-        const driveApps = (apps || []).filter(a => a.drive_id === drive.id && eligibleIds.has(a.student_id));
+        const driveApps = (apps as any[] || []).filter(a => a.drive_id === drive.id && eligibleIds.has(a.student_id));
         
         return {
           ...drive,
@@ -178,6 +179,7 @@ export default function UpcomingDrives() {
 function DriveIntelCard({ drive, departmentId }: { drive: any, departmentId: string }) {
   const [stats, setStats] = useState({ present: 0, absent: 0 });
   const [loadingAtt, setLoadingAtt] = useState(true);
+  const [showStudents, setShowStudents] = useState(false);
 
   useEffect(() => {
     const fetchAttendanceDetails = async () => {
@@ -253,11 +255,26 @@ function DriveIntelCard({ drive, departmentId }: { drive: any, departmentId: str
                    <div className="h-2 w-2 rounded-none bg-emerald-500 animate-pulse" />
                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none">Active Intelligence Feed</span>
                 </div>
-                <div className="text-[9px] font-black uppercase text-slate-300 tracking-widest">DRIVE SYNC: {new Date().toLocaleTimeString()}</div>
+                <div className="flex items-center gap-4">
+                  <div className="text-[9px] font-black uppercase text-slate-300 tracking-widest">DRIVE SYNC: {new Date().toLocaleTimeString()}</div>
+                  <Button onClick={() => setShowStudents(true)} variant="outline" className="h-8 rounded-none border-slate-200 uppercase text-[10px] font-black tracking-widest text-slate-600 hover:text-slate-900">
+                    <Users className="h-3 w-3 mr-2" /> View Students
+                  </Button>
+                </div>
              </div>
           </div>
         </div>
       </div>
+      
+      {showStudents && (
+         <DriveStudentsDialog
+           isOpen={showStudents}
+           onClose={() => setShowStudents(false)}
+           driveId={drive.id}
+           driveName={drive.company_name}
+           departmentId={departmentId}
+         />
+      )}
     </Card>
   );
 }
