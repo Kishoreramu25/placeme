@@ -26,3 +26,37 @@ dist-ssr
 .vercel
 .env
 .env.local
+
+# Sensitive secrets and credentials
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.p8
+*.jks
+*.keystore
+*.ovpn
+*.kubeconfig
+*credentials*.json
+*service-account*.json
+*secret*.json
+
+# Local databases / dumps / backups
+*.db
+*.sqlite
+*.sqlite3
+*.sqlitedb
+*.dump
+*.bak
+*.backup
+
+# Supabase local temp/secrets
+supabase/.temp/
+supabase/.branches/
+supabase/.env*
